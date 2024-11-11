@@ -6,6 +6,7 @@ import {
   BridgeQuoteRequest,
   BridgeQuoteResponse,
   CalculatePointsRequest,
+  Chain,
   ChainData,
   HexString,
   OtherAvailableAbis,
@@ -25,7 +26,6 @@ import {
   fetchBridgeQuoteRate,
   fetchQuoteRate,
   fetchTokenDetails,
-  fetchTokenPrice,
   swapTokensApi,
 } from '../api';
 import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
@@ -33,12 +33,14 @@ import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
 import ContractHandler from 'src/contractHandler';
 import PermitHandler from 'src/contractHandler/permitHandler';
 import { Signer } from 'ethers';
+import { getPriceForTokens } from 'src/service/price';
 
 class DzapClient {
   private static instance: DzapClient;
   private cancelTokenSource: CancelTokenSource | null = null;
   private contractHandler: ContractHandler;
   private permitHandler: PermitHandler;
+  private static chainConfig: ChainData | null = null;
 
   private constructor() {
     this.contractHandler = ContractHandler.getInstance();
@@ -51,6 +53,20 @@ class DzapClient {
       DzapClient.instance = new DzapClient();
     }
     return DzapClient.instance;
+  }
+
+  public static async getChainConfig(): Promise<ChainData> {
+    if (!DzapClient.chainConfig) {
+      const data = await fetchAllSupportedChains();
+      const chains: ChainData = {};
+      data.forEach((chain: Chain) => {
+        if (!chains[chain.chainId]) {
+          chains[chain.chainId] = chain;
+        }
+      });
+      DzapClient.chainConfig = chains;
+    }
+    return DzapClient.chainConfig;
   }
 
   public static getDZapAbi(service: AvailableDZapServices) {
@@ -97,8 +113,8 @@ class DzapClient {
     return await fetchTokenDetails(tokenAddress, chainId, account);
   }
 
-  public async getTokenPrice(tokenAddresses: string[], chainId: number): Promise<Record<string, string>> {
-    return await fetchTokenPrice(tokenAddresses, chainId);
+  public async getTokenPrice(tokenAddresses: string[], chainId: number): Promise<Record<string, string | null>> {
+    return await getPriceForTokens(chainId, tokenAddresses);
   }
 
   public swapTokens = ({ request, provider }: { request: SwapParamsRequest; provider: Signer }) => {

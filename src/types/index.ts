@@ -59,6 +59,10 @@ export type Chain = {
     source: boolean;
     destination: boolean;
   };
+  coingecko?: {
+    chainKey: string;
+    nativeTokenKey: string;
+  };
 };
 
 export type ApiRpcResponse = {
