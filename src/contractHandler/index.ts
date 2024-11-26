@@ -9,6 +9,7 @@ import {
   DZapTransactionResponse,
   HexString,
   SwapParamsRequest,
+  SwapParamsResponse,
 } from '../types';
 import { getDZapAbi, isTypeSigner } from '../utils';
 import { handleViemTransactionError, isAxiosError } from '../utils/errors';
@@ -41,16 +42,25 @@ class ContractHandler {
     chainId,
     request,
     signer,
+    txnData,
   }: {
     chainId: number;
     request: SwapParamsRequest;
     signer: Signer | WalletClient;
+    txnData?: SwapParamsResponse;
   }): Promise<DZapTransactionResponse> {
     const abi = getDZapAbi(Services.swap);
     try {
-      const { data: buildTxnResponseData } = await buildSwapTransaction(request);
+      let buildTxnResponseData: SwapParamsResponse;
+      if (txnData) {
+        buildTxnResponseData = txnData;
+      } else {
+        buildTxnResponseData = await buildSwapTransaction(request);
+      }
       const {
-        transactionRequest: { data, from, to, value, gasLimit },
+        data: {
+          transactionRequest: { data, from, to, value, gasLimit },
+        },
       } = buildTxnResponseData;
       if (isTypeSigner(signer)) {
         console.log('Using ethers signer.');
@@ -108,14 +118,21 @@ class ContractHandler {
     chainId,
     request,
     signer,
+    txnData,
   }: {
     chainId: number;
     request: BridgeParamsRequest;
     signer: Signer | WalletClient;
+    txnData?: BridgeParamsResponse;
   }): Promise<DZapTransactionResponse> {
     const abi = getDZapAbi(Services.bridge);
     try {
-      const buildTxnResponseData = (await buildBridgeTransaction(request)) as BridgeParamsResponse;
+      let buildTxnResponseData: BridgeParamsResponse;
+      if (txnData) {
+        buildTxnResponseData = txnData;
+      } else {
+        buildTxnResponseData = await buildBridgeTransaction(request);
+      }
       const { data, from, to, value, gasLimit, additionalInfo, updatedQuotes } = buildTxnResponseData;
       if (isTypeSigner(signer)) {
         console.log('Using ethers signer.');

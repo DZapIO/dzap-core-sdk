@@ -23,6 +23,7 @@ import {
   SwapQuoteData,
   SwapQuoteRequest,
   SwapQuoteResponse,
+  SwapParamsResponse,
 } from './types';
 
 import DzapClient from './client';
@@ -65,5 +66,6 @@ export {
   SwapQuoteData,
   SwapQuoteRequest,
   SwapQuoteResponse,
+  SwapParamsResponse,
   TxnStatus,
 };

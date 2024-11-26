@@ -1,0 +1,46 @@
+import { ChainData } from 'src/types';
+import { CoingeckoPriceProvider } from './provider/coingecko';
+import { fetchTokenPrice } from 'src/api';
+
+export class PriceService {
+  private priceProvider;
+  constructor() {
+    this.priceProvider = new CoingeckoPriceProvider();
+  }
+
+  getPriceFromProvider = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData | null): Promise<Record<string, number | null>> => {
+    return this.priceProvider.getPriceFromCoingecko(tokenAddresses, chainId, chainConfig);
+  };
+
+  getPriceForToken = async (chainId: number, tokenAddress: string, chainConfig: ChainData): Promise<string> => {
+    try {
+      const tokenPrices = await fetchTokenPrice([tokenAddress], chainId);
+      return tokenPrices[tokenAddress] || (await this.getPriceFromProvider(chainId, [tokenAddress], chainConfig))[tokenAddress]?.toString() || '0';
+    } catch {
+      return '0';
+    }
+  };
+
+  getPriceForTokens = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData | null): Promise<Record<string, string | null>> => {
+    try {
+      const tokenPrices = await fetchTokenPrice(tokenAddresses, chainId);
+      const missingTokens = tokenAddresses.filter((address) => !tokenPrices[address]);
+      const fetchedPrices = await this.getPriceFromProvider(chainId, missingTokens, chainConfig);
+      return tokenAddresses.reduce(
+        (acc, address) => {
+          acc[address] = tokenPrices[address] || fetchedPrices[address]?.toString() || '0';
+          return acc;
+        },
+        {} as Record<string, string | null>,
+      );
+    } catch (error) {
+      return tokenAddresses.reduce(
+        (acc, address) => {
+          acc[address] = '0';
+          return acc;
+        },
+        {} as Record<string, string | null>,
+      );
+    }
+  };
+}

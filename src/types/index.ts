@@ -189,6 +189,21 @@ export type SwapQuoteResponse = {
   };
 };
 
+export type SwapParamsResponse = {
+  data: {
+    transactionRequest: {
+      txId: string;
+      data: string;
+      to: string;
+      from: string;
+      chainId: number;
+      value: string;
+      gasLimit: string;
+    };
+    updatedQuotes: Record<string, string>;
+  };
+};
+
 // Bridge
 
 export type BridgeQuoteRequest = {

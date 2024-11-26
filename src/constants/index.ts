@@ -32,6 +32,7 @@ export const Services = {
 
 export const HISTORICAL_BLOCK = 10;
 
+export const NATIVE_TOKEN_DECIMAL = 18;
 export const NATIVE_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 

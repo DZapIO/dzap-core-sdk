@@ -1,3 +1,5 @@
+import Axios, { CancelTokenSource } from 'axios';
+import { StatusCodes, TxnStatus } from 'src/enums';
 import {
   AvailableDZapServices,
   BridgeParamsRequest,
@@ -12,28 +14,30 @@ import {
   OtherAvailableAbis,
   SwapData,
   SwapParamsRequest,
+  SwapParamsResponse,
   SwapQuoteRequest,
+  SwapQuoteResponse,
 } from 'src/types';
-import Axios, { CancelTokenSource } from 'axios';
-import { StatusCodes, TxnStatus } from 'src/enums';
-import { TransactionReceipt, WalletClient } from 'viem';
+import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
+import { formatUnits, TransactionReceipt, WalletClient } from 'viem';
 import {
   buildBridgeTransaction,
   buildSwapTransaction,
-  fetchCalculatedPoints,
   fetchAllSupportedChains,
   fetchAllTokens,
   fetchBridgeQuoteRate,
+  fetchCalculatedPoints,
   fetchQuoteRate,
   fetchTokenDetails,
   swapTokensApi,
 } from '../api';
-import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
-
 import ContractHandler from 'src/contractHandler';
 import PermitHandler from 'src/contractHandler/permitHandler';
 import { Signer } from 'ethers';
-import { getPriceForTokens } from 'src/service/price';
+import { PriceService } from 'src/service/price/priceService';
+import { zeroAddress } from 'src/utils/tokens';
+import BigNumber from 'bignumber.js';
+import { getDecimals } from 'src/utils/getDecimals';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -41,10 +45,11 @@ class DzapClient {
   private contractHandler: ContractHandler;
   private permitHandler: PermitHandler;
   private static chainConfig: ChainData | null = null;
-
+  private priceService;
   private constructor() {
     this.contractHandler = ContractHandler.getInstance();
     this.permitHandler = PermitHandler.getInstance();
+    this.priceService = new PriceService();
   }
 
   // Static method to control the access to the singleton instance.
@@ -76,13 +81,78 @@ class DzapClient {
     return getOtherAbis(name);
   };
 
-  public async getQuoteRate(request: SwapQuoteRequest) {
+  public async getQuoteRate(request: SwapQuoteRequest): Promise<SwapQuoteResponse> {
     if (this.cancelTokenSource) {
       this.cancelTokenSource.cancel('Cancelled due to new request');
     }
-
     this.cancelTokenSource = Axios.CancelToken.source();
-    return await fetchQuoteRate(request, this.cancelTokenSource.token);
+
+    const quotes: SwapQuoteResponse = await fetchQuoteRate(request, this.cancelTokenSource.token);
+
+    const tokenSet = new Set<string>();
+    Object.keys(quotes).forEach((key) => {
+      const [token1, token2] = key.split('-');
+      tokenSet.add(token1);
+      tokenSet.add(token2);
+      tokenSet.add(zeroAddress);
+    });
+
+    const tokenList = Array.from(tokenSet);
+    const tokensPrice = await this.getTokenPrice(tokenList, request.chainId);
+
+    Object.values(quotes).map((quote) => {
+      Object.values(quote.quoteRates).map((rate) => {
+        const data = rate.data;
+        if (data.srcAmountUSD && data.destAmountUSD) return;
+
+        const tokensDecimal = getDecimals(request, data.srcToken, data.destToken);
+
+        if (!tokensDecimal) return;
+        const srcTokenPricePerUnit = tokensPrice[data.srcToken] || '0';
+        const destTokenPricePerUnit = tokensPrice[data.destToken] || '0';
+
+        const srcAmount = formatUnits(BigInt(data.srcAmount), tokensDecimal.srcDecimals);
+        const destAmount = formatUnits(BigInt(data.destAmount), tokensDecimal.destDecimals);
+
+        const srcAmountUSD = BigNumber(srcAmount).multipliedBy(srcTokenPricePerUnit);
+        const destAmountUSD = BigNumber(destAmount).multipliedBy(destTokenPricePerUnit);
+
+        data.srcAmountUSD = +srcAmountUSD ? srcAmountUSD.toFixed() : null;
+        data.destAmountUSD = +destAmountUSD ? destAmountUSD.toFixed() : null;
+
+        // Optionally calculate and update price impact
+        if (+srcAmountUSD && +destAmountUSD) {
+          const priceImpact = destAmountUSD.minus(srcAmountUSD).div(srcAmountUSD).multipliedBy(100);
+          data.priceImpactPercent = priceImpact.toFixed(2);
+        }
+
+        data.fee.gasFee.map(async (fee) => {
+          if (fee.amountUSD && fee.amountUSD !== '0') return;
+          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
+          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
+            .multipliedBy(pricePerUnit)
+            .toFixed();
+        });
+
+        data.fee.protocolFee.map(async (fee) => {
+          if (fee.amountUSD && fee.amountUSD !== '0') return;
+          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
+          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
+            .multipliedBy(pricePerUnit)
+            .toFixed();
+        });
+
+        data.fee.providerFee.map(async (fee) => {
+          if (fee.amountUSD && fee.amountUSD !== '0') return;
+          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
+          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
+            .multipliedBy(pricePerUnit)
+            .toFixed();
+        });
+      });
+    });
+
+    return quotes;
   }
 
   public async getBridgeQuoteRate(request: BridgeQuoteRequest): Promise<BridgeQuoteResponse> {
@@ -114,19 +184,39 @@ class DzapClient {
   }
 
   public async getTokenPrice(tokenAddresses: string[], chainId: number): Promise<Record<string, string | null>> {
-    return await getPriceForTokens(chainId, tokenAddresses);
+    return await this.priceService.getPriceForTokens(chainId, tokenAddresses, await DzapClient.getChainConfig());
   }
 
   public swapTokens = ({ request, provider }: { request: SwapParamsRequest; provider: Signer }) => {
     return swapTokensApi({ request, provider });
   };
 
-  public async swap({ chainId, request, signer }: { chainId: number; request: SwapParamsRequest; signer: Signer | WalletClient }) {
-    return await this.contractHandler.handleSwap({ chainId, request, signer });
+  public async swap({
+    chainId,
+    request,
+    signer,
+    txnData,
+  }: {
+    chainId: number;
+    request: SwapParamsRequest;
+    signer: Signer | WalletClient;
+    txnData?: SwapParamsResponse;
+  }) {
+    return await this.contractHandler.handleSwap({ chainId, request, signer, txnData });
   }
 
-  public async bridge({ chainId, request, signer }: { chainId: number; request: BridgeParamsRequest; signer: Signer | WalletClient }) {
-    return await this.contractHandler.handleBridge({ chainId, request, signer });
+  public async bridge({
+    chainId,
+    request,
+    signer,
+    txnData,
+  }: {
+    chainId: number;
+    request: BridgeParamsRequest;
+    signer: Signer | WalletClient;
+    txnData?: BridgeParamsResponse;
+  }) {
+    return await this.contractHandler.handleBridge({ chainId, request, signer, txnData });
   }
 
   public decodeTrxData({ data, service }: { data: TransactionReceipt; service: AvailableDZapServices }) {
