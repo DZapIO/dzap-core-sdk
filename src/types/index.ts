@@ -181,6 +181,7 @@ export type SwapQuoteResponse = {
     recommendedSource: string;
     recommendedSourceByAmount: string;
     recommendedSourceByGas: string;
+    tokensWithoutPrice: string[];
     quoteRates: {
       [key: string]: {
         data: SwapQuoteResponseData;

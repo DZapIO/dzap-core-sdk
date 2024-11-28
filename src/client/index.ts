@@ -19,7 +19,7 @@ import {
   SwapQuoteResponse,
 } from 'src/types';
 import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
-import { formatUnits, TransactionReceipt, WalletClient } from 'viem';
+import { TransactionReceipt, WalletClient } from 'viem';
 import {
   buildBridgeTransaction,
   buildSwapTransaction,
@@ -35,9 +35,7 @@ import ContractHandler from 'src/contractHandler';
 import PermitHandler from 'src/contractHandler/permitHandler';
 import { Signer } from 'ethers';
 import { PriceService } from 'src/service/price/priceService';
-import { zeroAddress } from 'src/utils/tokens';
-import BigNumber from 'bignumber.js';
-import { getDecimals } from 'src/utils/getDecimals';
+import { swapQuoteUpdate } from 'src/utils/swapQuoteUpdate';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -88,71 +86,7 @@ class DzapClient {
     this.cancelTokenSource = Axios.CancelToken.source();
 
     const quotes: SwapQuoteResponse = await fetchQuoteRate(request, this.cancelTokenSource.token);
-
-    const tokenSet = new Set<string>();
-    Object.keys(quotes).forEach((key) => {
-      const [token1, token2] = key.split('-');
-      tokenSet.add(token1);
-      tokenSet.add(token2);
-      tokenSet.add(zeroAddress);
-    });
-
-    const tokenList = Array.from(tokenSet);
-    const tokensPrice = await this.getTokenPrice(tokenList, request.chainId);
-
-    Object.values(quotes).map((quote) => {
-      Object.values(quote.quoteRates).map((rate) => {
-        const data = rate.data;
-        if (data.srcAmountUSD && data.destAmountUSD) return;
-
-        const tokensDecimal = getDecimals(request, data.srcToken, data.destToken);
-
-        if (!tokensDecimal) return;
-        const srcTokenPricePerUnit = tokensPrice[data.srcToken] || '0';
-        const destTokenPricePerUnit = tokensPrice[data.destToken] || '0';
-
-        const srcAmount = formatUnits(BigInt(data.srcAmount), tokensDecimal.srcDecimals);
-        const destAmount = formatUnits(BigInt(data.destAmount), tokensDecimal.destDecimals);
-
-        const srcAmountUSD = BigNumber(srcAmount).multipliedBy(srcTokenPricePerUnit);
-        const destAmountUSD = BigNumber(destAmount).multipliedBy(destTokenPricePerUnit);
-
-        data.srcAmountUSD = +srcAmountUSD ? srcAmountUSD.toFixed() : null;
-        data.destAmountUSD = +destAmountUSD ? destAmountUSD.toFixed() : null;
-
-        // Optionally calculate and update price impact
-        if (+srcAmountUSD && +destAmountUSD) {
-          const priceImpact = destAmountUSD.minus(srcAmountUSD).div(srcAmountUSD).multipliedBy(100);
-          data.priceImpactPercent = priceImpact.toFixed(2);
-        }
-
-        data.fee.gasFee.map(async (fee) => {
-          if (fee.amountUSD && fee.amountUSD !== '0') return;
-          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
-          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
-            .multipliedBy(pricePerUnit)
-            .toFixed();
-        });
-
-        data.fee.protocolFee.map(async (fee) => {
-          if (fee.amountUSD && fee.amountUSD !== '0') return;
-          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
-          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
-            .multipliedBy(pricePerUnit)
-            .toFixed();
-        });
-
-        data.fee.providerFee.map(async (fee) => {
-          if (fee.amountUSD && fee.amountUSD !== '0') return;
-          const pricePerUnit = tokensPrice[fee.address] || (await this.getTokenPrice([fee.address], request.chainId))[fee.address] || '0';
-          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
-            .multipliedBy(pricePerUnit)
-            .toFixed();
-        });
-      });
-    });
-
-    return quotes;
+    return swapQuoteUpdate(quotes, request, this.priceService, await DzapClient.getChainConfig());
   }
 
   public async getBridgeQuoteRate(request: BridgeQuoteRequest): Promise<BridgeQuoteResponse> {
