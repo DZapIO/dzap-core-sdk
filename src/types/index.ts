@@ -277,6 +277,7 @@ export type BridgeQuoteResponse = {
     message?: string;
     recommendedSource?: string;
     quoteRates?: BridgeQuotes;
+    tokensWithoutPrice: Record<number, string[]>;
   };
 };
 

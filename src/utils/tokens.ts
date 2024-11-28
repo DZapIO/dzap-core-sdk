@@ -6,6 +6,7 @@ export const solanaNativeToken = '11111111111111111111111111111111';
 export const unmarshalDeadAddress = '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000';
 export const tonNativeToken = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
 export const artheraNativeToken = '0x000000000000000000000000000000000000aA09';
+export const suiNativeToken = '0x2::sui::SUI';
 
 export const nativeTokens: string[] = [
   '0x0000000000000000000000000000000000001010',
@@ -17,4 +18,7 @@ export const nativeTokens: string[] = [
   unmarshalDeadAddress,
   tonNativeToken,
   artheraNativeToken,
+  suiNativeToken,
 ];
+
+export const dZapNativeTokenFormat = zeroAddress;

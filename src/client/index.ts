@@ -36,6 +36,7 @@ import PermitHandler from 'src/contractHandler/permitHandler';
 import { Signer } from 'ethers';
 import { PriceService } from 'src/service/price/priceService';
 import { swapQuoteUpdate } from 'src/utils/swapQuoteUpdate';
+import { bridgeQuoteUpdate } from 'src/utils/bridgeQuoteUpdate';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -94,7 +95,8 @@ class DzapClient {
       this.cancelTokenSource.cancel('Cancelled due to new request');
     }
     this.cancelTokenSource = Axios.CancelToken.source();
-    return await fetchBridgeQuoteRate(request, this.cancelTokenSource.token);
+    const quotes: BridgeQuoteResponse = await fetchBridgeQuoteRate(request, this.cancelTokenSource.token);
+    return bridgeQuoteUpdate(quotes, request, this.priceService, await DzapClient.getChainConfig());
   }
 
   public async getBridgeParams(request: BridgeParamsRequest): Promise<BridgeParamsResponse> {
