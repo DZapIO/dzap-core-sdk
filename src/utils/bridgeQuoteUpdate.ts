@@ -11,7 +11,22 @@ export const bridgeQuoteUpdate = async (
   priceService: PriceService,
   chainConfig: ChainData | null,
 ): Promise<BridgeQuoteResponse> => {
-  const tokensWithoutPrice: Record<number, string[]> = Object.values(quotes)[0]?.tokensWithoutPrice ?? {};
+  const tokensWithoutPrice: Record<number, string[]> = {};
+
+  Object.values(quotes).forEach((quote) => {
+    if (quote.tokensWithoutPrice) {
+      Object.entries(quote.tokensWithoutPrice).forEach(([chainIdStr, tokens]) => {
+        const chainId = Number(chainIdStr);
+        if (!tokensWithoutPrice[chainId]) {
+          tokensWithoutPrice[chainId] = [];
+        }
+        const uniqueTokens = new Set(tokensWithoutPrice[chainId]);
+        tokens.forEach((token) => uniqueTokens.add(token));
+        tokensWithoutPrice[chainId] = Array.from(uniqueTokens);
+      });
+    }
+  });
+
   if (Object.keys(tokensWithoutPrice).length === 0) {
     return quotes;
   }
@@ -71,6 +86,14 @@ export const bridgeQuoteUpdate = async (
         await Promise.all([updateFeeAmountUSD(gasFee, tokensPrice), updateFeeAmountUSD(protocolFee, tokensPrice)]);
       }
       await updateFeeAmountUSD(providerFee, tokensPrice);
+      data.path = data.path.map((path) => {
+        return {
+          ...path,
+          fee: data.fee,
+          srcAmountUSD: data.srcAmountUSD,
+          destAmountUSD: data.destAmountUSD,
+        };
+      });
     }
   }
 

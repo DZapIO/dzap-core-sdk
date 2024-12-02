@@ -17,6 +17,7 @@ export class PriceService {
       const tokenPrices = await fetchTokenPrice([tokenAddress], chainId);
       return tokenPrices[tokenAddress] || (await this.getPriceFromProvider(chainId, [tokenAddress], chainConfig))[tokenAddress]?.toString() || '0';
     } catch {
+      console.error('Failed to fetch token price');
       return '0';
     }
   };

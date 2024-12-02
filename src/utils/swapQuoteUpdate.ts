@@ -11,7 +11,7 @@ export const swapQuoteUpdate = async (
   priceService: PriceService,
   chainConfig: ChainData | null,
 ): Promise<SwapQuoteResponse> => {
-  const tokensWithoutPrice = Object.values(quotes)[0]?.tokensWithoutPrice ?? [];
+  const tokensWithoutPrice = Object.values(quotes).flatMap((quote) => quote.tokensWithoutPrice) ?? [];
 
   if (tokensWithoutPrice.length === 0) {
     return quotes;
