@@ -3,7 +3,7 @@ import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { coingeckoConfig } from './config';
 import { isNativeCurrency } from 'src/utils';
-import { dZapNativeTokenFormat } from 'src/constants';
+import { getDZapNativeTokenByChainId } from 'src/utils/tokens';
 
 export class CoingeckoPriceProvider {
   private fetchNativePrice = async (chainId: number, chainConfig: ChainData | null): Promise<number> => {
@@ -41,8 +41,9 @@ export class CoingeckoPriceProvider {
         addressesWithoutNativeToken.length !== tokenAddresses.length ? this.fetchNativePrice(chainId, chainConfig) : undefined,
       ]);
 
+      console.log({ erc20Prices, nativePrice });
       if (nativePrice) {
-        erc20Prices[dZapNativeTokenFormat] = nativePrice;
+        erc20Prices[getDZapNativeTokenByChainId(chainId)] = nativePrice;
       }
 
       return erc20Prices;

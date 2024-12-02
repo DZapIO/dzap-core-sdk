@@ -71,11 +71,9 @@ export const bridgeQuoteUpdate = async (
       const updateFeeAmountUSD = async (fees: FeeDetails[], tokenPriceMap: Record<number, Record<string, number | null>>) => {
         for (const fee of fees) {
           if (fee.amountUSD && fee.amountUSD !== '0') continue;
-
-          const pricePerUnit = tokenPriceMap[request.fromChain]?.[fee.address] || '0';
-          fee.amountUSD = BigNumber(formatUnits(BigInt(fee.amount), fee.decimals))
-            .multipliedBy(pricePerUnit)
-            .toFixed();
+          const pricePerUnit = tokenPriceMap[request.fromChain]?.[fee.address] || 0;
+          const formattedFeeAmount = formatUnits(BigInt(fee.amount), fee.decimals);
+          fee.amountUSD = BigNumber(formattedFeeAmount).multipliedBy(pricePerUnit).toFixed();
         }
       };
 
@@ -90,8 +88,8 @@ export const bridgeQuoteUpdate = async (
         return {
           ...path,
           fee: data.fee,
-          srcAmountUSD: data.srcAmountUSD,
-          destAmountUSD: data.destAmountUSD,
+          srcAmountUSD: +srcAmountUSD ? srcAmountUSD.toFixed() : '0',
+          destAmountUSD: +destAmountUSD ? destAmountUSD.toFixed() : '0',
         };
       });
     }
