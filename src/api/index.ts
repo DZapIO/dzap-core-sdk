@@ -21,6 +21,7 @@ export const fetchQuoteRate = (request: SwapQuoteRequest, cancelToken: CancelTok
     data: request,
     method: POST,
     cancelToken,
+    shouldRetry: true,
   });
 
 export const fetchBridgeQuoteRate = (request: BridgeQuoteRequest, cancelToken: CancelToken) =>
@@ -29,6 +30,7 @@ export const fetchBridgeQuoteRate = (request: BridgeQuoteRequest, cancelToken: C
     data: request,
     method: POST,
     cancelToken,
+    shouldRetry: true,
   });
 
 export const buildBridgeTransaction = (request: BridgeParamsRequest) =>
