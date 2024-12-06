@@ -35,8 +35,8 @@ import ContractHandler from 'src/contractHandler';
 import PermitHandler from 'src/contractHandler/permitHandler';
 import { Signer } from 'ethers';
 import { PriceService } from 'src/service/price/priceService';
-import { swapQuoteUpdate } from 'src/utils/swapQuoteUpdate';
-import { bridgeQuoteUpdate } from 'src/utils/bridgeQuoteUpdate';
+import { updateSwapQuotes } from 'src/utils/updateSwapQuotes';
+import { updateBridgeQuotes } from 'src/utils/updateBridgeQuotes';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -87,7 +87,7 @@ class DzapClient {
     this.cancelTokenSource = Axios.CancelToken.source();
 
     const quotes: SwapQuoteResponse = await fetchQuoteRate(request, this.cancelTokenSource.token);
-    return swapQuoteUpdate(quotes, request, this.priceService, await DzapClient.getChainConfig());
+    return updateSwapQuotes(quotes, request, this.priceService, await DzapClient.getChainConfig());
   }
 
   public async getBridgeQuoteRate(request: BridgeQuoteRequest): Promise<BridgeQuoteResponse> {
@@ -96,7 +96,7 @@ class DzapClient {
     }
     this.cancelTokenSource = Axios.CancelToken.source();
     const quotes: BridgeQuoteResponse = await fetchBridgeQuoteRate(request, this.cancelTokenSource.token);
-    return bridgeQuoteUpdate(quotes, request, this.priceService, await DzapClient.getChainConfig());
+    return updateBridgeQuotes(quotes, request, this.priceService, await DzapClient.getChainConfig());
   }
 
   public async getBridgeParams(request: BridgeParamsRequest): Promise<BridgeParamsResponse> {

@@ -5,7 +5,7 @@ import BigNumber from 'bignumber.js';
 import { PriceService } from 'src/service/price/priceService';
 import { checkUsdExistForToken } from './checkUsdExistForToken';
 
-export const swapQuoteUpdate = async (
+export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
   priceService: PriceService,

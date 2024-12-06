@@ -5,7 +5,7 @@ import { PriceService } from 'src/service/price/priceService';
 import { nativeTokens } from './tokens';
 import { checkUsdExistForToken } from './checkUsdExistForToken';
 
-export const bridgeQuoteUpdate = async (
+export const updateBridgeQuotes = async (
   quotes: BridgeQuoteResponse,
   request: BridgeQuoteRequest,
   priceService: PriceService,
