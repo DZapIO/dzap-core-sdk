@@ -1,9 +1,9 @@
 import { ChainData, FeeDetails, SwapQuoteRequest, SwapQuoteResponse } from 'src/types';
 import { zeroAddress } from './tokens';
-import { getDecimals } from './getDecimals';
 import { formatUnits } from 'viem';
 import BigNumber from 'bignumber.js';
 import { PriceService } from 'src/service/price/priceService';
+import { checkUsdExistForToken } from './checkUsdExistForToken';
 
 export const swapQuoteUpdate = async (
   quotes: SwapQuoteResponse,
@@ -22,36 +22,35 @@ export const swapQuoteUpdate = async (
   for (const quote of Object.values(quotes)) {
     for (const rate of Object.values(quote.quoteRates)) {
       const data = rate.data;
-
-      if (data.srcAmountUSD && data.destAmountUSD) {
+      if (checkUsdExistForToken(data)) {
         break;
       }
-
-      const tokensDecimal = getDecimals(request, data.srcToken, data.destToken);
-      if (!tokensDecimal) {
+      const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken && d.destToken === data.destToken);
+      if (!tokensDetails) {
         break;
       }
-
-      const { srcDecimals, destDecimals } = tokensDecimal;
+      const { srcDecimals, destDecimals } = tokensDetails;
 
       const srcAmount = formatUnits(BigInt(data.srcAmount), srcDecimals);
       const destAmount = formatUnits(BigInt(data.destAmount), destDecimals);
 
-      const srcTokenPricePerUnit = tokensPrice[data.srcToken] || '0';
-      const destTokenPricePerUnit = tokensPrice[data.destToken] || '0';
+      const srcTokenPricePerUnit = tokensPrice[data.srcToken] || 0;
+      const destTokenPricePerUnit = tokensPrice[data.destToken] || 0;
 
-      const srcAmountUSD = BigNumber(srcAmount).multipliedBy(srcTokenPricePerUnit);
-      const destAmountUSD = BigNumber(destAmount).multipliedBy(destTokenPricePerUnit);
+      const calculateAmountUSD = (amount: string | number, pricePerUnit: number) => {
+        const amountUSD = BigNumber(amount).multipliedBy(pricePerUnit);
+        return +amountUSD ? amountUSD.toFixed() : null;
+      };
 
-      data.srcAmountUSD = +srcAmountUSD ? srcAmountUSD.toFixed() : null;
-      data.destAmountUSD = +destAmountUSD ? destAmountUSD.toFixed() : null;
+      data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
+      data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
 
-      if (srcAmountUSD && destAmountUSD) {
-        const priceImpact = destAmountUSD.minus(srcAmountUSD).div(srcAmountUSD).multipliedBy(100);
+      if (data.srcAmountUSD && data.destAmountUSD) {
+        const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
-      const updateFeeAmountUSD = async (fees: FeeDetails[], tokenPriceMap: Record<string, number | null>) => {
+      const updateFeeAmountUSD = (fees: FeeDetails[], tokenPriceMap: Record<string, number | null>) => {
         for (const fee of fees) {
           if (fee.amountUSD && fee.amountUSD !== '0') continue;
           const pricePerUnit = tokenPriceMap[fee.address] || '0';
@@ -62,8 +61,10 @@ export const swapQuoteUpdate = async (
       };
 
       const { gasFee, protocolFee, providerFee } = data.fee;
+
       if (tokensWithoutPrice.includes(zeroAddress)) {
-        await Promise.all([updateFeeAmountUSD(gasFee, tokensPrice), updateFeeAmountUSD(protocolFee, tokensPrice)]);
+        updateFeeAmountUSD(gasFee, tokensPrice);
+        updateFeeAmountUSD(protocolFee, tokensPrice);
       }
       updateFeeAmountUSD(providerFee, tokensPrice);
     }

@@ -2,8 +2,8 @@ import { BridgeQuoteRequest, BridgeQuoteResponse, ChainData, FeeDetails } from '
 import { formatUnits } from 'viem';
 import BigNumber from 'bignumber.js';
 import { PriceService } from 'src/service/price/priceService';
-import { getDecimalsFromBridge } from './getDecimals';
 import { nativeTokens } from './tokens';
+import { checkUsdExistForToken } from './checkUsdExistForToken';
 
 export const bridgeQuoteUpdate = async (
   quotes: BridgeQuoteResponse,
@@ -44,27 +44,37 @@ export const bridgeQuoteUpdate = async (
     if (!quote.quoteRates) continue;
 
     for (const data of Object.values(quote.quoteRates)) {
-      if (data.srcAmountUSD && data.destAmountUSD) continue;
+      if (checkUsdExistForToken(data)) {
+        break;
+      }
 
-      const tokensDecimal = getDecimalsFromBridge(request, data.srcToken.address, data.destToken.address);
-      if (!tokensDecimal) continue;
-
-      const { srcDecimals, destDecimals, toChainId } = tokensDecimal;
+      const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken.address && d.destToken === data.destToken.address);
+      if (!tokensDetails) {
+        break;
+      }
+      const { srcDecimals, destDecimals, toChain } = tokensDetails;
 
       const srcAmount = formatUnits(BigInt(data.srcAmount), srcDecimals);
       const destAmount = formatUnits(BigInt(data.destAmount), destDecimals);
 
-      const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || '0';
-      const destTokenPricePerUnit = tokensPrice[toChainId]?.[data.destToken.address] || '0';
+      const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || 0;
+      const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || 0;
 
-      const srcAmountUSD = BigNumber(srcAmount).multipliedBy(srcTokenPricePerUnit);
-      const destAmountUSD = BigNumber(destAmount).multipliedBy(destTokenPricePerUnit);
+      const calculateAmountUSD = (amount: string | number, pricePerUnit: number) => {
+        const amountUSD = BigNumber(amount).multipliedBy(pricePerUnit);
+        return +amountUSD ? amountUSD.toFixed() : '0';
+      };
 
-      data.srcAmountUSD = +srcAmountUSD ? srcAmountUSD.toFixed() : '0';
-      data.destAmountUSD = +destAmountUSD ? destAmountUSD.toFixed() : '0';
+      data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
+      data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
 
-      if (+srcAmountUSD && +destAmountUSD) {
-        const priceImpact = destAmountUSD.minus(srcAmountUSD).div(srcAmountUSD).multipliedBy(100);
+      if (data.srcAmountUSD && data.destAmountUSD) {
+        const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
+        data.priceImpactPercent = priceImpact.toFixed(2);
+      }
+
+      if (data.srcAmountUSD && data.destAmountUSD) {
+        const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
@@ -88,8 +98,8 @@ export const bridgeQuoteUpdate = async (
         return {
           ...path,
           fee: data.fee,
-          srcAmountUSD: +srcAmountUSD ? srcAmountUSD.toFixed() : '0',
-          destAmountUSD: +destAmountUSD ? destAmountUSD.toFixed() : '0',
+          srcAmountUSD: data.srcAmountUSD,
+          destAmountUSD: data.destAmountUSD,
         };
       });
     }

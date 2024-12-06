@@ -9,6 +9,7 @@ export class PriceService {
   }
 
   getPriceFromProvider = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData | null): Promise<Record<string, number | null>> => {
+    if (!chainConfig) return {};
     return this.priceProvider.getPriceFromCoingecko(tokenAddresses, chainId, chainConfig);
   };
 
@@ -22,7 +23,7 @@ export class PriceService {
     }
   };
 
-  getPriceForTokens = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData | null): Promise<Record<string, string | null>> => {
+  getPriceForTokens = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData): Promise<Record<string, string | null>> => {
     try {
       const tokenPrices = await fetchTokenPrice(tokenAddresses, chainId);
       const missingTokens = tokenAddresses.filter((address) => !tokenPrices[address]);
