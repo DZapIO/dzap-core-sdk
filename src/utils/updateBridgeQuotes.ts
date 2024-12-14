@@ -1,5 +1,4 @@
 import { BridgeQuoteRate, BridgeQuoteRequest, BridgeQuoteResponse, ChainData, Fee } from 'src/types';
-import { formatUnits } from 'viem';
 import BigNumber from 'bignumber.js';
 import { PriceService } from 'src/service/price/priceService';
 import { nativeTokens } from './tokens';
@@ -9,7 +8,7 @@ import { calculateAmountUSD } from '.';
 export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>, hasNativeToken: boolean) => {
   const updateAmountUSD = (feeItem: any, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
-    if (feeItem.amountUSD && feeItem.amountUSD !== '0') {
+    if (!feeItem.amountUSD || parseFloat(feeItem.amountUSD) === 0) {
       return calculateAmountUSD(amount, decimals, price.toString()).toString();
     }
     return feeItem.amountUSD;
@@ -90,14 +89,11 @@ export const updateBridgeQuotes = async (
       }
       const { srcDecimals, destDecimals, toChain } = tokensDetails;
 
-      const srcAmount = formatUnits(BigInt(data.srcAmount), srcDecimals);
-      const destAmount = formatUnits(BigInt(data.destAmount), destDecimals);
-
       const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || 0;
       const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || 0;
 
-      data.srcAmountUSD = calculateAmountUSD(srcAmount, srcDecimals, srcTokenPricePerUnit.toString()).toString();
-      data.destAmountUSD = calculateAmountUSD(destAmount, destDecimals, destTokenPricePerUnit.toString()).toString();
+      data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit.toString()).toString();
+      data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit.toString()).toString();
 
       if (data.srcAmountUSD && data.destAmountUSD) {
         const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
