@@ -14,9 +14,9 @@ export class PriceService {
 
   private createProvidersMap(): Map<PriceProviderType, IPriceProvider> {
     return new Map<PriceProviderType, IPriceProvider>([
-      [PriceProviders.coingecko, new CoingeckoPriceProvider()],
-      [PriceProviders.defiLlama, new DefiLlamaPriceProvider()],
       [PriceProviders.dZap, new DzapPriceProvider()],
+      [PriceProviders.defiLlama, new DefiLlamaPriceProvider()],
+      [PriceProviders.coingecko, new CoingeckoPriceProvider()],
     ]);
   }
 
