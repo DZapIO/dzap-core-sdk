@@ -1,5 +1,4 @@
 import * as ABI from '../artifacts';
-
 import { DZapAbis, OtherAbis, Services, dZapNativeTokenFormat } from 'src/constants';
 import { StatusCodes, TxnStatus } from 'src/enums';
 import {
@@ -9,7 +8,6 @@ import {
   WalletClient,
   createPublicClient,
   fallback,
-  formatUnits,
   getAddress,
   http,
   parseEventLogs,
@@ -22,7 +20,6 @@ import { Signer } from 'ethers';
 import { RPC_BATCHING_WAIT_TIME, RPC_RETRY_DELAY } from 'src/constants/rpc';
 import { viemChainsById } from './chains';
 import { nativeTokens } from './tokens';
-import BigNumber from 'bignumber.js';
 
 const publicClientRpcConfig = { batch: { wait: RPC_BATCHING_WAIT_TIME }, retryDelay: RPC_RETRY_DELAY };
 
@@ -190,14 +187,4 @@ export const getOtherAbis = (name: OtherAvailableAbis) => {
     default:
       throw new Error('Invalid Abi');
   }
-};
-
-export const calculateAmountUSD = (amountInWei: string, decimals: number | null, price: string | null) => {
-  return decimals
-    ? Number(
-        BigNumber(formatUnits(BigInt(amountInWei), decimals))
-          .multipliedBy(price || 0)
-          .toFixed(5),
-      )
-    : 0;
 };

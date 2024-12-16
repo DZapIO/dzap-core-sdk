@@ -8,7 +8,11 @@ export class PriceService {
     this.priceProvider = new CoingeckoPriceProvider();
   }
 
-  getPriceFromProvider = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData | null): Promise<Record<string, number | null>> => {
+  getPriceFromProviders = async (
+    chainId: number,
+    tokenAddresses: string[],
+    chainConfig: ChainData | null,
+  ): Promise<Record<string, number | null>> => {
     if (!chainConfig) return {};
     return this.priceProvider.getPriceFromCoingecko(tokenAddresses, chainId, chainConfig);
   };
@@ -16,7 +20,7 @@ export class PriceService {
   getPriceForToken = async (chainId: number, tokenAddress: string, chainConfig: ChainData): Promise<string> => {
     try {
       const tokenPrices = await fetchTokenPrice([tokenAddress], chainId);
-      return tokenPrices[tokenAddress] || (await this.getPriceFromProvider(chainId, [tokenAddress], chainConfig))[tokenAddress]?.toString() || '0';
+      return tokenPrices[tokenAddress] || (await this.getPriceFromProviders(chainId, [tokenAddress], chainConfig))[tokenAddress]?.toString() || '0';
     } catch {
       console.error('Failed to fetch token price');
       return '0';
@@ -27,7 +31,7 @@ export class PriceService {
     try {
       const tokenPrices = await fetchTokenPrice(tokenAddresses, chainId);
       const missingTokens = tokenAddresses.filter((address) => !tokenPrices[address]);
-      const fetchedPrices = await this.getPriceFromProvider(chainId, missingTokens, chainConfig);
+      const fetchedPrices = await this.getPriceFromProviders(chainId, missingTokens, chainConfig);
       return tokenAddresses.reduce(
         (acc, address) => {
           acc[address] = tokenPrices[address] || fetchedPrices[address]?.toString() || '0';

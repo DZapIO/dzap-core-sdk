@@ -1,12 +1,11 @@
-import { BridgeQuoteRate, BridgeQuoteRequest, BridgeQuoteResponse, ChainData, Fee } from 'src/types';
-import BigNumber from 'bignumber.js';
+import { BridgeQuoteRate, BridgeQuoteRequest, BridgeQuoteResponse, ChainData, Fee, FeeDetails } from 'src/types';
 import { PriceService } from 'src/service/price/priceService';
-import { nativeTokens } from './tokens';
-import { checkUsdExistForToken } from './checkUsdExistForToken';
-import { calculateAmountUSD } from '.';
+import Decimal from 'decimal.js';
+import { isUSDPriceAvailableForQuotes } from './checkUsdExistForToken';
+import { calculateAmountUSD } from './amount';
 
-export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>, hasNativeToken: boolean) => {
-  const updateAmountUSD = (feeItem: any, chainId: number, address: string, amount: string, decimals: number) => {
+export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>) => {
+  const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
     if (!feeItem.amountUSD || parseFloat(feeItem.amountUSD) === 0) {
       return calculateAmountUSD(amount, decimals, price.toString()).toString();
@@ -14,24 +13,24 @@ export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, n
     return feeItem.amountUSD;
   };
 
-  const updateFeeItems = (feeItems: any[]) =>
+  const updateFeeItems = (feeItems: FeeDetails[]) =>
     feeItems.map((feeItem) => ({
       ...feeItem,
       amountUSD: updateAmountUSD(feeItem, feeItem.chainId, feeItem.address, feeItem.amount, feeItem.decimals),
     }));
 
   return {
-    gasFee: hasNativeToken ? updateFeeItems(fee.gasFee) : fee.gasFee,
+    gasFee: updateFeeItems(fee.gasFee),
     providerFee: updateFeeItems(fee.providerFee),
     protocolFee: updateFeeItems(fee.protocolFee),
   };
 };
 
-export const updatePath = (data: BridgeQuoteRate, tokensPrice: Record<number, Record<string, number | null>>, hasNativeToken: boolean) => {
+export const updatePath = (data: BridgeQuoteRate, tokensPrice: Record<number, Record<string, number | null>>) => {
   return data.path.map((path) => {
     return {
       ...path,
-      fee: updateFee(path.fee, tokensPrice, hasNativeToken),
+      fee: updateFee(path.fee, tokensPrice),
       srcAmountUSD: data.srcAmountUSD,
       destAmountUSD: data.destAmountUSD,
     };
@@ -42,7 +41,7 @@ export const updateBridgeQuotes = async (
   quotes: BridgeQuoteResponse,
   request: BridgeQuoteRequest,
   priceService: PriceService,
-  chainConfig: ChainData | null,
+  chainConfig: ChainData,
 ): Promise<BridgeQuoteResponse> => {
   const tokensWithoutPrice: Record<number, Set<string>> = {};
 
@@ -69,7 +68,7 @@ export const updateBridgeQuotes = async (
       Object.entries(tokensWithoutPrice).map(async ([chainIdStr, tokens]) => {
         const chainId = Number(chainIdStr);
         const tokenAddresses = Array.from(tokens);
-        const prices = await priceService.getPriceFromProvider(chainId, tokenAddresses, chainConfig);
+        const prices = await priceService.getPriceFromProviders(chainId, tokenAddresses, chainConfig);
         return [chainId, prices];
       }),
     ),
@@ -79,13 +78,13 @@ export const updateBridgeQuotes = async (
     if (!quote.quoteRates) continue;
 
     for (const data of Object.values(quote.quoteRates)) {
-      if (checkUsdExistForToken(data)) {
-        break;
+      if (isUSDPriceAvailableForQuotes(data)) {
+        continue;
       }
 
       const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken.address && d.destToken === data.destToken.address);
       if (!tokensDetails) {
-        break;
+        continue;
       }
       const { srcDecimals, destDecimals, toChain } = tokensDetails;
 
@@ -96,18 +95,12 @@ export const updateBridgeQuotes = async (
       data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit.toString()).toString();
 
       if (data.srcAmountUSD && data.destAmountUSD) {
-        const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
+        const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
-      if (data.srcAmountUSD && data.destAmountUSD) {
-        const priceImpact = BigNumber(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).multipliedBy(100);
-        data.priceImpactPercent = priceImpact.toFixed(2);
-      }
-      const hasNativeToken = nativeTokens.some((token) => tokensWithoutPrice[request.fromChain]?.has(token));
-
-      data.fee = updateFee(data.fee, tokensPrice, hasNativeToken);
-      data.path = updatePath(data, tokensPrice, hasNativeToken);
+      data.fee = updateFee(data.fee, tokensPrice);
+      data.path = updatePath(data, tokensPrice);
     }
   }
 

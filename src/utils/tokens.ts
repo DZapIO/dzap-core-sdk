@@ -23,25 +23,3 @@ export const nativeTokens: string[] = [
 ];
 
 export const dZapNativeTokenFormat = zeroAddress;
-
-export const CHAINS_IDS = {
-  solana: 7565164,
-  sui: 19219,
-  celo: 42220,
-  arthera: 10242,
-} as const;
-
-export const getDZapNativeTokenByChainId = (chainId: number) => {
-  switch (chainId) {
-    case CHAINS_IDS.solana:
-      return solanaNativeToken;
-    case CHAINS_IDS.celo:
-      return '0x471EcE3750Da237f93B8E339c536989b8978a438';
-    case CHAINS_IDS.arthera:
-      return artheraNativeToken;
-    case CHAINS_IDS.sui:
-      return suiNativeToken;
-    default:
-      return zeroAddress;
-  }
-};
