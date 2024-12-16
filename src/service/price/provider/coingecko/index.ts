@@ -3,8 +3,17 @@ import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { coingeckoConfig } from './config';
 import { isNativeCurrency } from 'src/utils';
+import { PRICE_PROVIDER_PRIORITY_TYPE, PRICE_PROVIDER_TYPE, PriceProviderPriorityType, PriceProviderType } from '../..';
+import { IPriceService } from '../../IPriceService';
 
-export class CoingeckoPriceProvider {
+export class CoingeckoPriceProvider implements IPriceService {
+  getId(): PriceProviderType {
+    return PRICE_PROVIDER_TYPE.COINGECKO;
+  }
+
+  getPriorities(): PriceProviderPriorityType[] {
+    return [PRICE_PROVIDER_PRIORITY_TYPE.RELIABLE, PRICE_PROVIDER_PRIORITY_TYPE.FAST, PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT];
+  }
   private fetchNativePrice = async (chainId: number, chainConfig: ChainData): Promise<number> => {
     if (!chainConfig) return 0;
     const { coingecko } = chainConfig[chainId];
@@ -17,7 +26,7 @@ export class CoingeckoPriceProvider {
     return response[coingecko?.nativeTokenKey]?.usd || 0;
   };
 
-  private fetchERC20Prices = async (chainId: number, addresses: string[], chainConfig: ChainData): Promise<Record<string, number>> => {
+  private fetchERC20Prices = async (chainId: number, addresses: string[], chainConfig: ChainData): Promise<Record<string, string | null>> => {
     if (!addresses.length || !chainConfig) return {};
 
     const { coingecko } = chainConfig[chainId];
@@ -27,19 +36,20 @@ export class CoingeckoPriceProvider {
 
     const responses = await Promise.allSettled(requests);
 
-    return responses.reduce<Record<string, number>>((acc, result, index) => {
+    return responses.reduce<Record<string, string | null>>((acc, result, index) => {
       const address = addresses[index];
       if (result.status === 'fulfilled') {
-        acc[address] = result.value[address.toLowerCase()]?.usd || 0;
+        const tokenPrice = result.value[address.toLowerCase()]?.usd;
+        acc[address] = tokenPrice === undefined ? '0' : tokenPrice.toString();
       } else {
-        acc[address] = 0;
+        acc[address] = '0';
         console.error(`Error fetching data for address ${address}:`, result.reason);
       }
       return acc;
     }, {});
   };
 
-  public getPriceFromCoingecko = async (tokenAddresses: string[], chainId: number, chainConfig: ChainData) => {
+  public fetchPrices = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData) => {
     try {
       const addressesWithoutNativeToken = tokenAddresses.filter((address) => !isNativeCurrency(address));
       const [erc20Prices, nativePrice] = await Promise.all([
@@ -47,7 +57,7 @@ export class CoingeckoPriceProvider {
         addressesWithoutNativeToken.length !== tokenAddresses.length ? this.fetchNativePrice(chainId, chainConfig) : undefined,
       ]);
       if (nativePrice) {
-        erc20Prices[chainConfig[chainId].nativeToken.contract] = nativePrice;
+        erc20Prices[chainConfig[chainId].nativeToken.contract] = nativePrice.toString();
       }
 
       return erc20Prices;

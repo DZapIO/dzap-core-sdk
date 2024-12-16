@@ -120,7 +120,8 @@ class DzapClient {
   }
 
   public async getTokenPrice(tokenAddresses: string[], chainId: number): Promise<Record<string, string | null>> {
-    return await this.priceService.getPriceForTokens(chainId, tokenAddresses, await DzapClient.getChainConfig());
+    const chainConfig = await DzapClient.getChainConfig();
+    return await this.priceService.getPrices({ chainId, tokenAddresses, chainConfig });
   }
 
   public swapTokens = ({ request, provider }: { request: SwapParamsRequest; provider: Signer }) => {

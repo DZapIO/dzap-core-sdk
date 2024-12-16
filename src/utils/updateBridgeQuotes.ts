@@ -3,6 +3,7 @@ import { PriceService } from 'src/service/price/priceService';
 import Decimal from 'decimal.js';
 import { isUSDPriceAvailableForQuotes } from './checkUsdExistForToken';
 import { calculateAmountUSD } from './amount';
+import { EXTERNAL_PROVIDERS } from 'src/service/price';
 
 export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>) => {
   const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
@@ -68,7 +69,7 @@ export const updateBridgeQuotes = async (
       Object.entries(tokensWithoutPrice).map(async ([chainIdStr, tokens]) => {
         const chainId = Number(chainIdStr);
         const tokenAddresses = Array.from(tokens);
-        const prices = await priceService.getPriceFromProviders(chainId, tokenAddresses, chainConfig);
+        const prices = await priceService.getPrices({ chainId, tokenAddresses, chainConfig, allowedProviders: EXTERNAL_PROVIDERS });
         return [chainId, prices];
       }),
     ),

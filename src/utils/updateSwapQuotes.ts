@@ -3,6 +3,7 @@ import { formatUnits } from 'viem';
 import { PriceService } from 'src/service/price/priceService';
 import { isUSDPriceAvailableForQuotes } from './checkUsdExistForToken';
 import Decimal from 'decimal.js';
+import { EXTERNAL_PROVIDERS } from 'src/service/price';
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
@@ -15,7 +16,12 @@ export const updateSwapQuotes = async (
     return quotes;
   }
 
-  const tokensPrice = await priceService.getPriceFromProviders(request.chainId, tokensWithoutPrice, chainConfig);
+  const tokensPrice = await priceService.getPrices({
+    chainId: request.chainId,
+    tokenAddresses: tokensWithoutPrice,
+    chainConfig,
+    allowedProviders: EXTERNAL_PROVIDERS,
+  });
 
   for (const quote of Object.values(quotes)) {
     for (const rate of Object.values(quote.quoteRates)) {
@@ -32,10 +38,10 @@ export const updateSwapQuotes = async (
       const srcAmount = formatUnits(BigInt(data.srcAmount), srcDecimals);
       const destAmount = formatUnits(BigInt(data.destAmount), destDecimals);
 
-      const srcTokenPricePerUnit = tokensPrice[data.srcToken] || 0;
-      const destTokenPricePerUnit = tokensPrice[data.destToken] || 0;
+      const srcTokenPricePerUnit = tokensPrice[data.srcToken] || '0';
+      const destTokenPricePerUnit = tokensPrice[data.destToken] || '0';
 
-      const calculateAmountUSD = (amount: string | number, pricePerUnit: number) => {
+      const calculateAmountUSD = (amount: string | number, pricePerUnit: string) => {
         const amountUSD = new Decimal(amount).mul(pricePerUnit);
         return +amountUSD ? amountUSD.toFixed() : null;
       };
@@ -48,7 +54,7 @@ export const updateSwapQuotes = async (
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
-      const updateFeeAmountUSD = (fees: FeeDetails[], tokenPriceMap: Record<string, number | null>) => {
+      const updateFeeAmountUSD = (fees: FeeDetails[], tokenPriceMap: Record<string, string | null>) => {
         for (const fee of fees) {
           if (fee.amountUSD && fee.amountUSD !== '0') continue;
           const pricePerUnit = tokenPriceMap[fee.address] || '0';
