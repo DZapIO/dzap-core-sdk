@@ -1,10 +1,8 @@
 import { BridgeQuoteRate, BridgeQuoteRequest, BridgeQuoteResponse, ChainData, Fee, FeeDetails } from 'src/types';
 import { PriceService } from 'src/service/price/priceService';
 import Decimal from 'decimal.js';
-import { isUSDPriceAvailableForQuotes } from './checkUsdExistForToken';
 import { calculateAmountUSD } from './amount';
-import { EXTERNAL_PROVIDERS } from 'src/service/price';
-
+import { PriceProviders } from 'src/service/price';
 export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>) => {
   const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
@@ -69,7 +67,7 @@ export const updateBridgeQuotes = async (
       Object.entries(tokensWithoutPrice).map(async ([chainIdStr, tokens]) => {
         const chainId = Number(chainIdStr);
         const tokenAddresses = Array.from(tokens);
-        const prices = await priceService.getPrices({ chainId, tokenAddresses, chainConfig, allowedProviders: EXTERNAL_PROVIDERS });
+        const prices = await priceService.getPrices({ chainId, tokenAddresses, chainConfig, notAllowSources: [PriceProviders.dZap] });
         return [chainId, prices];
       }),
     ),
@@ -79,10 +77,6 @@ export const updateBridgeQuotes = async (
     if (!quote.quoteRates) continue;
 
     for (const data of Object.values(quote.quoteRates)) {
-      if (isUSDPriceAvailableForQuotes(data)) {
-        continue;
-      }
-
       const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken.address && d.destToken === data.destToken.address);
       if (!tokensDetails) {
         continue;

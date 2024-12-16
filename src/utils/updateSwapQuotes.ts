@@ -1,9 +1,8 @@
 import { ChainData, FeeDetails, SwapQuoteRequest, SwapQuoteResponse } from 'src/types';
 import { formatUnits } from 'viem';
 import { PriceService } from 'src/service/price/priceService';
-import { isUSDPriceAvailableForQuotes } from './checkUsdExistForToken';
 import Decimal from 'decimal.js';
-import { EXTERNAL_PROVIDERS } from 'src/service/price';
+import { PriceProviders } from 'src/service/price';
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
@@ -20,15 +19,12 @@ export const updateSwapQuotes = async (
     chainId: request.chainId,
     tokenAddresses: tokensWithoutPrice,
     chainConfig,
-    allowedProviders: EXTERNAL_PROVIDERS,
+    notAllowSources: [PriceProviders.dZap],
   });
 
   for (const quote of Object.values(quotes)) {
     for (const rate of Object.values(quote.quoteRates)) {
       const data = rate.data;
-      if (isUSDPriceAvailableForQuotes(data)) {
-        break;
-      }
       const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken && d.destToken === data.destToken);
       if (!tokensDetails) {
         break;

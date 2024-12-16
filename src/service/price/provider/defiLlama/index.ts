@@ -3,17 +3,13 @@ import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { defiLlamaConfig } from './config';
 import { DefiLlamaResponse } from './types';
-import { IPriceService } from '../../IPriceService';
-import { PRICE_PROVIDER_PRIORITY_TYPE, PRICE_PROVIDER_TYPE, PriceProviderPriorityType, PriceProviderType } from '../..';
+import { IPriceProvider } from '../../IPriceProvider';
+import { PriceProviders } from '../..';
 
-export class DefiLlamaPriceProvider implements IPriceService {
-  getId(): PriceProviderType {
-    return PRICE_PROVIDER_TYPE.DEFI_LLAMA;
-  }
+export class DefiLlamaPriceProvider implements IPriceProvider {
+  public id = PriceProviders.defiLlama;
+  public requiresChainConfig = true;
 
-  getPriorities(): PriceProviderPriorityType[] {
-    return [PRICE_PROVIDER_PRIORITY_TYPE.FAST, PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT, PRICE_PROVIDER_PRIORITY_TYPE.RELIABLE];
-  }
   private preProcess = (chainId: number, tokenAddresses: string[], chainConfig: ChainData) => {
     const { name } = chainConfig[chainId];
     if (!name) return [];

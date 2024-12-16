@@ -1,15 +1,11 @@
 import { fetchTokenPrice } from 'src/api';
-import { PRICE_PROVIDER_PRIORITY_TYPE, PRICE_PROVIDER_TYPE, PriceProviderPriorityType, PriceProviderType } from '../..';
-import { IPriceService } from '../../IPriceService';
+import { IPriceProvider } from '../../IPriceProvider';
+import { PriceProviders } from '../..';
 
-export class DzapPriceProvider implements IPriceService {
-  getId(): PriceProviderType {
-    return PRICE_PROVIDER_TYPE.DZAP;
-  }
+export class DzapPriceProvider implements IPriceProvider {
+  public id = PriceProviders.dZap;
+  public requiresChainConfig = false;
 
-  getPriorities(): PriceProviderPriorityType[] {
-    return [PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT, PRICE_PROVIDER_PRIORITY_TYPE.RELIABLE, PRICE_PROVIDER_PRIORITY_TYPE.FAST];
-  }
   public fetchPrices = async (chainId: number, tokenAddresses: string[]): Promise<Record<string, string | null>> => {
     try {
       const tokenPrices = await fetchTokenPrice(tokenAddresses, chainId);

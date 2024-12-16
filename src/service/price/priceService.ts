@@ -1,75 +1,103 @@
 import { ChainData } from 'src/types';
-import { PriceProviderPriorityType, PRICE_PROVIDER_PRIORITY_TYPE, PriceProviderType, PRICE_PROVIDER_TYPE, ALL_PROVIDERS } from '.';
-import { IPriceService } from './IPriceService';
+import { IPriceProvider } from './IPriceProvider';
 import { CoingeckoPriceProvider } from './provider/coingecko';
 import { DefiLlamaPriceProvider } from './provider/defiLlama';
 import { DzapPriceProvider } from './provider/dzap';
+import { PriceProviders, PriceProviderType } from '.';
 
 export class PriceService {
-  private providers: Map<PriceProviderType, IPriceService>;
+  private providers: Map<PriceProviderType, IPriceProvider>;
 
   constructor() {
-    this.providers = this.createProviderMap();
+    this.providers = this.createProvidersMap();
   }
 
-  private createProviderMap(): Map<PriceProviderType, IPriceService> {
-    return new Map<PriceProviderType, IPriceService>([
-      [PRICE_PROVIDER_TYPE.COINGECKO, new CoingeckoPriceProvider()],
-      [PRICE_PROVIDER_TYPE.DEFI_LLAMA, new DefiLlamaPriceProvider()],
-      [PRICE_PROVIDER_TYPE.DZAP, new DzapPriceProvider()],
+  private createProvidersMap(): Map<PriceProviderType, IPriceProvider> {
+    return new Map<PriceProviderType, IPriceProvider>([
+      [PriceProviders.coingecko, new CoingeckoPriceProvider()],
+      [PriceProviders.defiLlama, new DefiLlamaPriceProvider()],
+      [PriceProviders.dZap, new DzapPriceProvider()],
     ]);
-  }
-
-  private selectProviders(
-    priorityType: PriceProviderPriorityType = PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT,
-    allowedProviders: PriceProviderType[] = ALL_PROVIDERS,
-  ): IPriceService[] {
-    return Array.from(this.providers.values())
-      .filter((provider) => (!allowedProviders || allowedProviders.includes(provider.getId())) && provider.getPriorities().includes(priorityType))
-      .sort((a, b) => {
-        const aPriority = a.getPriorities().indexOf(priorityType);
-        const bPriority = b.getPriorities().indexOf(priorityType);
-        return aPriority - bPriority;
-      });
   }
 
   async getPrices({
     chainId,
     tokenAddresses,
     chainConfig,
-    priorityType = PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT,
-    allowedProviders = ALL_PROVIDERS,
+    allowedSources,
+    notAllowSources = [],
   }: {
     chainId: number;
     tokenAddresses: string[];
-    chainConfig: ChainData;
-    priorityType?: PriceProviderPriorityType;
-    allowedProviders?: PriceProviderType[];
+    chainConfig: ChainData | null;
+    allowedSources?: PriceProviderType[];
+    notAllowSources?: PriceProviderType[];
   }): Promise<Record<string, string | null>> {
     if (!tokenAddresses || tokenAddresses.length === 0) {
       console.warn('No token addresses provided');
       return {};
     }
-    const providersToTry = this.selectProviders(priorityType, allowedProviders);
 
-    const finalPrices: Record<string, string | null> = {};
-    const remainingTokens = new Set(tokenAddresses);
+    const validProviders = this.getValidProviders({ allowedSources, notAllowSources, chainConfig });
 
-    for (const provider of providersToTry) {
-      if (remainingTokens.size === 0) break;
-      const tokenList = Array.from(remainingTokens);
-      const fetchedPrices = await provider.fetchPrices(chainId, tokenList, chainConfig);
-      for (const [address, price] of Object.entries(fetchedPrices)) {
-        if (price !== null) {
-          finalPrices[address] = price;
-          remainingTokens.delete(address);
-        }
+    if (validProviders.length === 0) {
+      console.warn('No valid providers available based on the provided constraints');
+      return {};
+    }
+
+    const result: Record<string, string | null> = {};
+    let remainingTokens = [...tokenAddresses];
+
+    for (const provider of validProviders) {
+      if (remainingTokens.length === 0) break;
+
+      const fetchedPrices = await provider.fetchPrices(chainId, remainingTokens, chainConfig);
+      remainingTokens = this.updateTokensPrice(fetchedPrices, result, remainingTokens);
+    }
+
+    if (remainingTokens.length > 0) {
+      console.warn('Prices not found for tokens:', remainingTokens);
+    }
+
+    return result;
+  }
+
+  private getValidProviders({
+    allowedSources,
+    notAllowSources,
+    chainConfig,
+  }: {
+    allowedSources?: PriceProviderType[];
+    notAllowSources?: PriceProviderType[];
+    chainConfig: ChainData | null;
+  }): IPriceProvider[] {
+    return Array.from(this.providers.values()).filter((provider) => {
+      const isInAllowedSources = allowedSources?.includes(provider.id) ?? true;
+      const isInNotAllowedSources = notAllowSources?.includes(provider.id) ?? false;
+
+      const isAllowed = allowedSources ? isInAllowedSources && !isInNotAllowedSources : !isInNotAllowedSources;
+
+      if (provider.requiresChainConfig && !chainConfig) {
+        console.error(`Provider ${provider.id} requires chainConfig but none was provided.`);
+        return false;
       }
-    }
-    if (remainingTokens.size > 0) {
-      console.warn('Prices not found for tokens:', Array.from(remainingTokens));
-    }
 
-    return finalPrices;
+      return isAllowed;
+    });
+  }
+
+  private updateTokensPrice(
+    fetchedPrices: Record<string, string | null>,
+    finalPrices: Record<string, string | null>,
+    remainingTokens: string[],
+  ): string[] {
+    return remainingTokens.filter((token) => {
+      const price = fetchedPrices[token];
+      if (price !== null) {
+        finalPrices[token] = price;
+        return false;
+      }
+      return true;
+    });
   }
 }

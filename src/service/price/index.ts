@@ -1,19 +1,7 @@
-export const PRICE_PROVIDER_TYPE = {
-  COINGECKO: 'coingecko',
-  DEFI_LLAMA: 'defiLlama',
-  DZAP: 'dzap',
+export const PriceProviders = {
+  dZap: 'dZap',
+  defiLlama: 'defiLlama',
+  coingecko: 'coingecko',
 } as const;
 
-export type PriceProviderType = (typeof PRICE_PROVIDER_TYPE)[keyof typeof PRICE_PROVIDER_TYPE];
-
-export const PRICE_PROVIDER_PRIORITY_TYPE = {
-  DEFAULT: 'default',
-  FAST: 'fast',
-  RELIABLE: 'reliable',
-} as const;
-
-export type PriceProviderPriorityType = (typeof PRICE_PROVIDER_PRIORITY_TYPE)[keyof typeof PRICE_PROVIDER_PRIORITY_TYPE];
-
-export const ALL_PROVIDERS: PriceProviderType[] = Object.values(PRICE_PROVIDER_TYPE);
-
-export const EXTERNAL_PROVIDERS: PriceProviderType[] = ALL_PROVIDERS.filter((provider) => provider !== PRICE_PROVIDER_TYPE.DZAP);
+export type PriceProviderType = (typeof PriceProviders)[keyof typeof PriceProviders];

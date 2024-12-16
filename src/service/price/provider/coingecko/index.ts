@@ -3,17 +3,13 @@ import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { coingeckoConfig } from './config';
 import { isNativeCurrency } from 'src/utils';
-import { PRICE_PROVIDER_PRIORITY_TYPE, PRICE_PROVIDER_TYPE, PriceProviderPriorityType, PriceProviderType } from '../..';
-import { IPriceService } from '../../IPriceService';
+import { IPriceProvider } from '../../IPriceProvider';
+import { PriceProviders } from '../..';
 
-export class CoingeckoPriceProvider implements IPriceService {
-  getId(): PriceProviderType {
-    return PRICE_PROVIDER_TYPE.COINGECKO;
-  }
+export class CoingeckoPriceProvider implements IPriceProvider {
+  public id = PriceProviders.coingecko;
+  public requiresChainConfig = true;
 
-  getPriorities(): PriceProviderPriorityType[] {
-    return [PRICE_PROVIDER_PRIORITY_TYPE.RELIABLE, PRICE_PROVIDER_PRIORITY_TYPE.FAST, PRICE_PROVIDER_PRIORITY_TYPE.DEFAULT];
-  }
   private fetchNativePrice = async (chainId: number, chainConfig: ChainData): Promise<number> => {
     if (!chainConfig) return 0;
     const { coingecko } = chainConfig[chainId];
