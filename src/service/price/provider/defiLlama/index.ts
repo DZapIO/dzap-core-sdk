@@ -3,11 +3,10 @@ import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { defiLlamaConfig } from './config';
 import { DefiLlamaResponse } from './types';
-import { IPriceProvider } from '../../IPriceProvider';
-import { PriceProviders } from '../..';
+import { IPriceProvider, priceProviders } from '../../types/IPriceProvider';
 
 export class DefiLlamaPriceProvider implements IPriceProvider {
-  public id = PriceProviders.defiLlama;
+  public id = priceProviders.defiLlama;
   public requiresChainConfig = true;
 
   private preProcess = (chainId: number, tokenAddresses: string[], chainConfig: ChainData) => {

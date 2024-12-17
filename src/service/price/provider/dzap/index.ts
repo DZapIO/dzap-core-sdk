@@ -1,9 +1,8 @@
 import { fetchTokenPrice } from 'src/api';
-import { IPriceProvider } from '../../IPriceProvider';
-import { PriceProviders } from '../..';
+import { IPriceProvider, priceProviders } from '../../types/IPriceProvider';
 
 export class DzapPriceProvider implements IPriceProvider {
-  public id = PriceProviders.dZap;
+  public id = priceProviders.dZap;
   public requiresChainConfig = false;
 
   public fetchPrices = async (chainId: number, tokenAddresses: string[]): Promise<Record<string, string | null>> => {

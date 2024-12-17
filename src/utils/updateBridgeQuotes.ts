@@ -1,8 +1,8 @@
 import { BridgeQuoteRate, BridgeQuoteRequest, BridgeQuoteResponse, ChainData, Fee, FeeDetails } from 'src/types';
-import { PriceService } from 'src/service/price/priceService';
 import Decimal from 'decimal.js';
 import { calculateAmountUSD } from './amount';
-import { PriceProviders } from 'src/service/price';
+import { PriceService } from 'src/service/price';
+import { priceProviders } from 'src/service/price/types/IPriceProvider';
 export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>) => {
   const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
@@ -67,7 +67,7 @@ export const updateBridgeQuotes = async (
       Object.entries(tokensWithoutPrice).map(async ([chainIdStr, tokens]) => {
         const chainId = Number(chainIdStr);
         const tokenAddresses = Array.from(tokens);
-        const prices = await priceService.getPrices({ chainId, tokenAddresses, chainConfig, notAllowSources: [PriceProviders.dZap] });
+        const prices = await priceService.getPrices({ chainId, tokenAddresses, chainConfig, notAllowSources: [priceProviders.dZap] });
         return [chainId, prices];
       }),
     ),

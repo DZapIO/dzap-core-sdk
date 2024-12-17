@@ -2,12 +2,11 @@ import { GET } from 'src/constants/httpMethods';
 import { ChainData } from 'src/types';
 import { invoke } from 'src/utils/axios';
 import { coingeckoConfig } from './config';
-import { isNativeCurrency } from 'src/utils';
-import { IPriceProvider } from '../../IPriceProvider';
-import { PriceProviders } from '../..';
+import { IPriceProvider, priceProviders } from '../../types/IPriceProvider';
+import { isNativeCurrency } from 'src/utils/tokens';
 
 export class CoingeckoPriceProvider implements IPriceProvider {
-  public id = PriceProviders.coingecko;
+  public id = priceProviders.coingecko;
   public requiresChainConfig = true;
 
   private fetchNativePrice = async (chainId: number, chainConfig: ChainData): Promise<number> => {
@@ -47,7 +46,7 @@ export class CoingeckoPriceProvider implements IPriceProvider {
 
   public fetchPrices = async (chainId: number, tokenAddresses: string[], chainConfig: ChainData) => {
     try {
-      const addressesWithoutNativeToken = tokenAddresses.filter((address) => !isNativeCurrency(address));
+      const addressesWithoutNativeToken = tokenAddresses.filter((address) => !isNativeCurrency(address, chainConfig));
       const [erc20Prices, nativePrice] = await Promise.all([
         this.fetchERC20Prices(chainId, addressesWithoutNativeToken, chainConfig),
         addressesWithoutNativeToken.length !== tokenAddresses.length ? this.fetchNativePrice(chainId, chainConfig) : undefined,

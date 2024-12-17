@@ -1,8 +1,8 @@
 import { ChainData, FeeDetails, SwapQuoteRequest, SwapQuoteResponse } from 'src/types';
 import { formatUnits } from 'viem';
-import { PriceService } from 'src/service/price/priceService';
 import Decimal from 'decimal.js';
-import { PriceProviders } from 'src/service/price';
+import { priceProviders } from 'src/service/price/types/IPriceProvider';
+import { PriceService } from 'src/service/price';
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
@@ -19,7 +19,7 @@ export const updateSwapQuotes = async (
     chainId: request.chainId,
     tokenAddresses: tokensWithoutPrice,
     chainConfig,
-    notAllowSources: [PriceProviders.dZap],
+    notAllowSources: [priceProviders.dZap],
   });
 
   for (const quote of Object.values(quotes)) {
