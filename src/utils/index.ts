@@ -19,7 +19,6 @@ import { AvailableDZapServices, BridgeParamsRequestData, HexString, OtherAvailab
 import { Signer } from 'ethers';
 import { RPC_BATCHING_WAIT_TIME, RPC_RETRY_DELAY } from 'src/constants/rpc';
 import { viemChainsById } from './chains';
-// import { nativeTokens } from './tokens';
 
 const publicClientRpcConfig = { batch: { wait: RPC_BATCHING_WAIT_TIME }, retryDelay: RPC_RETRY_DELAY };
 
@@ -146,8 +145,6 @@ export const isTypeSigner = (variable: any): variable is Signer => {
 };
 
 export const isDZapNativeToken = (srcToken: string) => srcToken === dZapNativeTokenFormat;
-
-// export const isNativeCurrency = (contract: string) => nativeTokens.includes(contract);
 
 export const getDZapAbi = (service: AvailableDZapServices) => {
   switch (service) {
