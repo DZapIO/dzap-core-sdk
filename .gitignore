@@ -18,4 +18,4 @@ tsconfig.tsbuildinfo
 public/**/*.js
 jest.results.json
 *.#*
-bun
+bun.lockb
