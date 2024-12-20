@@ -37,6 +37,7 @@ import { Signer } from 'ethers';
 import { updateSwapQuotes } from 'src/utils/updateSwapQuotes';
 import { updateBridgeQuotes } from 'src/utils/updateBridgeQuotes';
 import { PriceService } from 'src/service/price';
+import { updateTokenListPrices } from 'src/utils/tokens';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -120,7 +121,19 @@ class DzapClient {
   }
 
   public async getAllTokens(chainId: number, source?: string, account?: string) {
-    return await fetchAllTokens(chainId, source, account);
+    try {
+      const [tokensResult, chainConfigResult] = await Promise.allSettled([fetchAllTokens(chainId, source, account), DzapClient.getChainConfig()]);
+
+      const tokens = tokensResult.status === 'fulfilled' ? tokensResult.value : {};
+      const chainConfig = chainConfigResult.status === 'fulfilled' ? chainConfigResult.value : null;
+
+      if (!chainConfig) return tokens;
+
+      return await updateTokenListPrices(tokens, chainId, chainConfig, this.priceService);
+    } catch (error) {
+      console.error('Error fetching or updating tokens:', error);
+      return {};
+    }
   }
 
   public async getTokenDetails(tokenAddress: string, chainId: number, account?: string) {
