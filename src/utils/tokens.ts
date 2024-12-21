@@ -16,7 +16,7 @@ export const updateTokenListPrices = async (
 ): Promise<TokenResponse> => {
   try {
     const tokensWithoutPrice = Object.values(tokens)
-      .filter(({ price, balance, balanceInUsd }) => (!price || price === '0') && balance !== '0' && balanceInUsd === null)
+      .filter(({ price, balance }) => (!price || price === '0') && balance !== '0')
       .map(({ contract }) => contract);
 
     if (tokensWithoutPrice.length === 0) return tokens;
