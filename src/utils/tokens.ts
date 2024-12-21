@@ -14,26 +14,25 @@ export const updateTokenListPrices = async (
   chainConfig: ChainData,
   priceService: PriceService,
 ): Promise<TokenResponse> => {
-  const tokensWithoutPrice = Object.values(tokens)
-    .filter(({ price, balance }) => (!price || price === '0') && balance !== '0')
-    .map(({ contract }) => contract);
-
-  if (tokensWithoutPrice.length === 0) return tokens;
-
   try {
+    const tokensWithoutPrice = Object.values(tokens)
+      .filter(({ price, balance }) => (!price || price === '0') && balance !== '0')
+      .map(({ contract }) => contract);
+
+    if (tokensWithoutPrice.length === 0) return tokens;
+
     const fetchedPrices = await priceService.getPrices({
       chainId,
       tokenAddresses: tokensWithoutPrice,
       chainConfig,
       notAllowSources: [priceProviders.dZap],
     });
-    return Object.keys(tokens).reduce((acc, key) => {
-      acc[key] = {
-        ...tokens[key],
-        price: fetchedPrices[key] || tokens[key].price,
-      };
-      return acc;
-    }, {} as TokenResponse);
+
+    tokensWithoutPrice.forEach((token) => {
+      tokens[token].price = fetchedPrices[token] || tokens[token].price;
+      tokens[token].balanceInUsd = fetchedPrices[token] ? parseFloat(fetchedPrices[token]) * parseFloat(tokens[token].balance) : null;
+    });
+    return tokens;
   } catch (error) {
     console.error('Error fetching token prices:', error);
     return tokens;
