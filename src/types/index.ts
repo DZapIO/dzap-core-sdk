@@ -299,6 +299,15 @@ export type Token = {
   price?: string;
 };
 
+export type TokenInfo = NativeTokenInfo & {
+  chainId: number;
+  balanceInUsd?: number | null;
+};
+
+export type TokenResponse = {
+  [key: string]: TokenInfo;
+};
+
 // Bridge Params
 
 export type BridgeParamsRequest = {
