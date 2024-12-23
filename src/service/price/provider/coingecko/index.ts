@@ -9,7 +9,7 @@ export class CoingeckoPriceProvider implements IPriceProvider {
   public id = priceProviders.coingecko;
   public requiresChainConfig = true;
 
-  private fetchNativePrice = async (chainId: number, chainConfig: ChainData): Promise<number> => {
+  private fetchNativePrice = async (chainId: number, chainConfig: ChainData): Promise<number | null> => {
     if (!chainConfig) return 0;
     const { coingecko } = chainConfig[chainId];
     if (!coingecko) return 0;
@@ -18,7 +18,7 @@ export class CoingeckoPriceProvider implements IPriceProvider {
       method: GET,
     });
 
-    return response[coingecko?.nativeTokenKey]?.usd || 0;
+    return response[coingecko?.nativeTokenKey]?.usd || null;
   };
 
   private fetchERC20Prices = async (chainId: number, addresses: string[], chainConfig: ChainData): Promise<Record<string, string | null>> => {
@@ -35,9 +35,9 @@ export class CoingeckoPriceProvider implements IPriceProvider {
       const address = addresses[index];
       if (result.status === 'fulfilled') {
         const tokenPrice = result.value[address.toLowerCase()]?.usd;
-        acc[address] = tokenPrice === undefined ? '0' : tokenPrice.toString();
+        acc[address] = tokenPrice === undefined ? null : tokenPrice.toString();
       } else {
-        acc[address] = '0';
+        acc[address] = null;
         console.error(`Error fetching data for address ${address}:`, result.reason);
       }
       return acc;

@@ -15,7 +15,7 @@ export class SymbiosisPriceProvider implements IPriceProvider {
     }));
   };
 
-  private postProcess = (chainId: number, tokenAddresses: string[], chainConfig: ChainData, respose: SymbiosisResponse[]) => {
+  private postProcess = (chainId: number, chainConfig: ChainData, respose: SymbiosisResponse[]) => {
     const { name } = chainConfig[chainId];
     if (!name) return {};
     return respose.reduce<Record<string, string | null>>((acc, tokenInfo) => {
@@ -37,7 +37,7 @@ export class SymbiosisPriceProvider implements IPriceProvider {
         endpoint: symbiosisConfig.url,
         data: data,
       });
-      return this.postProcess(chainId, tokenAddresses, chainConfig, response);
+      return this.postProcess(chainId, chainConfig, response);
     } catch (e) {
       return {};
     }
