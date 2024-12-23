@@ -3,6 +3,7 @@ import { invoke } from 'src/utils/axios';
 import { IPriceProvider, priceProviders } from '../../types/IPriceProvider';
 import { symbiosisConfig } from './config';
 import { SymbiosisRequest, SymbiosisResponse } from './types';
+import { formatToken } from 'src/utils/tokens';
 
 export class SymbiosisPriceProvider implements IPriceProvider {
   public id = priceProviders.symbiosis;
@@ -19,7 +20,7 @@ export class SymbiosisPriceProvider implements IPriceProvider {
     const { name } = chainConfig[chainId];
     if (!name) return {};
     return respose.reduce<Record<string, string | null>>((acc, tokenInfo) => {
-      const token = tokenInfo.address;
+      const token = formatToken(tokenInfo.address, chainId, chainConfig);
       if (!token) {
         acc[token] = null;
         return acc;

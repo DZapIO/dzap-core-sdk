@@ -46,10 +46,13 @@ export function isNonEVMChain(chainId: number, chainConfig: ChainData) {
   return chainConfig[chainId]?.chainType !== 'evm';
 }
 
-export const formatToken = (token: HexString, chainConfig: ChainData, nativeToken = zeroAddress): HexString => {
-  return isNativeCurrency(token, chainConfig) ? (nativeToken as HexString) : isAddress(token) ? getChecksumAddress(token) : token;
-};
-
-export const formatTokenByChainId = (token: string, chainId: number, chainConfig: ChainData, nativeToken = zeroAddress): string => {
-  return isNonEVMChain(chainId, chainConfig) ? token : formatToken(token as HexString, chainConfig, nativeToken);
+export const formatToken = (token: string, chainId: number, chainConfig: ChainData, nativeToken = zeroAddress): string => {
+  if (isNonEVMChain(chainId, chainConfig)) {
+    return token;
+  }
+  return isNativeCurrency(token as HexString, chainConfig)
+    ? (nativeToken as HexString)
+    : isAddress(token)
+      ? getChecksumAddress(token as HexString)
+      : token;
 };

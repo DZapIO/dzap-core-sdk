@@ -3,7 +3,6 @@ import { formatUnits } from 'viem';
 import Decimal from 'decimal.js';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 import { PriceService } from 'src/service/price';
-import { formatTokenByChainId } from './tokens';
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
@@ -26,11 +25,7 @@ export const updateSwapQuotes = async (
   for (const quote of Object.values(quotes)) {
     for (const rate of Object.values(quote.quoteRates)) {
       const data = rate.data;
-      const tokensDetails = request.data.find(
-        (d) =>
-          formatTokenByChainId(d.srcToken, request.chainId, chainConfig) === data.srcToken &&
-          formatTokenByChainId(d.destToken, request.chainId, chainConfig) === data.destToken,
-      );
+      const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken && d.destToken === data.destToken);
       if (!tokensDetails) {
         continue;
       }
