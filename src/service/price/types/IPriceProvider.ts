@@ -4,6 +4,7 @@ export const priceProviders = {
   dZap: 'dZap',
   defiLlama: 'defiLlama',
   coingecko: 'coingecko',
+  symbiosis: 'symbiosis',
 } as const;
 
 export type PriceProvider = (typeof priceProviders)[keyof typeof priceProviders];

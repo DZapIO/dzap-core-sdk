@@ -1,7 +1,8 @@
 import { PriceService } from 'src/service/price';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
-import { ChainData, TokenResponse } from 'src/types';
-import { formatUnits } from 'viem';
+import { ChainData, HexString, TokenResponse } from 'src/types';
+import { formatUnits, isAddress, zeroAddress } from 'viem';
+import { getChecksumAddress } from '.';
 
 export const isNativeCurrency = (address: string, chainConfig: ChainData) => {
   if (!chainConfig) return false;
@@ -39,4 +40,16 @@ export const updateTokenListPrices = async (
     console.error('Error fetching token prices:', error);
     return tokens;
   }
+};
+
+export function isNonEVMChain(chainId: number, chainConfig: ChainData) {
+  return chainConfig[chainId]?.chainType !== 'evm';
+}
+
+export const formatToken = (token: HexString, chainConfig: ChainData, nativeToken = zeroAddress): HexString => {
+  return isNativeCurrency(token, chainConfig) ? (nativeToken as HexString) : isAddress(token) ? getChecksumAddress(token) : token;
+};
+
+export const formatTokenByChainId = (token: string, chainId: number, chainConfig: ChainData, nativeToken = zeroAddress): string => {
+  return isNonEVMChain(chainId, chainConfig) ? token : formatToken(token as HexString, chainConfig, nativeToken);
 };
