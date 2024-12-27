@@ -3,7 +3,6 @@ import { CoingeckoPriceProvider } from './provider/coingecko';
 import { DefiLlamaPriceProvider } from './provider/defiLlama';
 import { DzapPriceProvider } from './provider/dzap';
 import { IPriceProvider, PriceProvider, priceProviders } from './types/IPriceProvider';
-import { SymbiosisPriceProvider } from './provider/symbiosis';
 
 export class PriceService {
   private providers: Map<PriceProvider, IPriceProvider>;
@@ -17,7 +16,6 @@ export class PriceService {
       [priceProviders.dZap, new DzapPriceProvider()],
       [priceProviders.defiLlama, new DefiLlamaPriceProvider()],
       [priceProviders.coingecko, new CoingeckoPriceProvider()],
-      [priceProviders.symbiosis, new SymbiosisPriceProvider()],
     ]);
   }
 
