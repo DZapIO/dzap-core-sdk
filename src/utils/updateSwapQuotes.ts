@@ -64,6 +64,15 @@ export const updateSwapQuotes = async (
       updateFeeAmountUSD(protocolFee, tokensPrice);
 
       updateFeeAmountUSD(providerFee, tokensPrice);
+      quote.quoteRates = Object.fromEntries(
+        Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
+          if (a.data.priceImpactPercent == null || isNaN(parseFloat(a.data.priceImpactPercent))) return 1;
+          if (b.data.priceImpactPercent == null || isNaN(parseFloat(b.data.priceImpactPercent))) return -1;
+          const aImpact = parseFloat(a.data.priceImpactPercent);
+          const bImpact = parseFloat(b.data.priceImpactPercent);
+          return bImpact - aImpact;
+        }),
+      );
     }
   }
 

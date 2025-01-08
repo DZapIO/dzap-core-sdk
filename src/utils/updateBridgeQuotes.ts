@@ -97,6 +97,16 @@ export const updateBridgeQuotes = async (
       data.fee = updateFee(data.fee, tokensPrice);
       data.path = updatePath(data, tokensPrice);
     }
+    quote.quoteRates = Object.fromEntries(
+      Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
+        const aImpact = parseFloat(a.priceImpactPercent);
+        const bImpact = parseFloat(b.priceImpactPercent);
+
+        if (aImpact == null || isNaN(aImpact)) return 1;
+        if (bImpact == null || isNaN(bImpact)) return -1;
+        return bImpact - aImpact;
+      }),
+    );
   }
 
   return quotes;
