@@ -86,10 +86,10 @@ export const updateBridgeQuotes = async (
       const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || 0;
       const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || 0;
       if (!Number(data.srcAmountUSD)) {
-        data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit).toString();
+        data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit);
       }
       if (!Number(data.destAmountUSD)) {
-        data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit).toString();
+        data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit);
       }
 
       if (Number(data.srcAmountUSD) && Number(data.destAmountUSD)) {
