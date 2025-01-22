@@ -44,7 +44,7 @@ export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, s
     const price = tokensPrice[chainId]?.[address] || '0';
     if (!feeItem.amountUSD || parseFloat(feeItem.amountUSD) === 0) {
       isUpdated = feeItem.included;
-      return calculateAmountUSD(amount, decimals, price).toString();
+      return calculateAmountUSD(amount, decimals, price);
     }
     return feeItem.amountUSD;
   };

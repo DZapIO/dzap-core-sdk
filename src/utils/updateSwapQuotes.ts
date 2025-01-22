@@ -77,10 +77,10 @@ export const updateSwapQuotes = async (
         }),
       );
       const recommendedSourceByGas = Object.keys(quote.quoteRates).sort((a, b) =>
-        new Decimal(calculateNetGasFee(quote.quoteRates[b].data)).minus(calculateNetGasFee(quote.quoteRates[a].data)).toNumber(),
+        new Decimal(calculateNetGasFee(quote.quoteRates[b].data)).comparedTo(calculateNetGasFee(quote.quoteRates[a].data)),
       )[0];
       const recommendedSourceByAmount = Object.keys(quote.quoteRates).sort((a, b) =>
-        new Decimal(quote.quoteRates[a].data.destAmount).minus(quote.quoteRates[b].data.destAmount).toNumber(),
+        new Decimal(quote.quoteRates[a].data.destAmount).comparedTo(quote.quoteRates[b].data.destAmount),
       )[0];
       quote.recommendedSourceByAmount = recommendedSourceByAmount;
       quote.recommendedSourceByGas = recommendedSourceByGas;

@@ -40,7 +40,7 @@ export const updateBridgeQuotes = async (
   );
 
   for (const quote of Object.values(quotes)) {
-    if (!quote.quoteRates) continue;
+    if (!quote.quoteRates || !Object.keys(quote.quoteRates).length) continue;
     let isSorted = true;
     for (const data of Object.values(quote.quoteRates)) {
       const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken.address && d.destToken === data.destToken.address);
