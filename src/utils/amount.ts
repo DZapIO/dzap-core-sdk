@@ -6,6 +6,27 @@ export const calculateAmountUSD = (amountInWei: string, decimals: number, price:
   return decimals ? new Decimal(formatUnits(BigInt(amountInWei), decimals)).mul(price || 0).toFixed(5) : '0';
 };
 
+export const calculateNetGasFeeUsd = (item: SwapQuoteResponseData | BridgeQuoteRate): string => {
+  const totalGas = item.fee.gasFee.reduce((acc, fee) => {
+    if (!fee.included) {
+      const feeAmount = BigInt(fee.amountUSD || '0');
+      return acc + feeAmount;
+    }
+    return acc;
+  }, BigInt(0));
+  return totalGas.toString();
+};
+
+export const calculateNetAmount = (item: BridgeQuoteRate | SwapQuoteResponseData) => {
+  let feeUSD = new Decimal(calculateNetGasFeeUsd(item));
+  item.fee.providerFee.forEach((fee) => {
+    if (!fee.included) {
+      feeUSD = feeUSD.plus(new Decimal(fee.amountUSD || '0'));
+    }
+  });
+  return new Decimal(item.destAmountUSD || '0').minus(feeUSD).toFixed();
+};
+
 export const calculateNetGasFee = (item: SwapQuoteResponseData | BridgeQuoteRate): string => {
   const totalGas = item.fee.gasFee.reduce((acc, fee) => {
     if (!fee.included) {
@@ -15,14 +36,4 @@ export const calculateNetGasFee = (item: SwapQuoteResponseData | BridgeQuoteRate
     return acc;
   }, BigInt(0));
   return totalGas.toString();
-};
-
-export const calculateNetAmount = (item: BridgeQuoteRate | SwapQuoteResponseData) => {
-  let feeUSD = new Decimal(calculateNetGasFee(item));
-  item.fee.providerFee.forEach((fee) => {
-    if (!fee.included) {
-      feeUSD = feeUSD.plus(new Decimal(fee.amountUSD || '0'));
-    }
-  });
-  return new Decimal(item.destAmountUSD || '0').minus(feeUSD).toFixed(5);
 };

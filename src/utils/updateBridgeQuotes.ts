@@ -4,11 +4,11 @@ import { calculateAmountUSD, calculateNetAmount } from './amount';
 import { PriceService } from 'src/service/price';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, number | null>>) => {
-  let isSorted = true;
+  let isUpdated = true;
   const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
     if (!feeItem.amountUSD || parseFloat(feeItem.amountUSD) === 0) {
-      isSorted = false;
+      isUpdated = !(feeItem.included === true);
       return calculateAmountUSD(amount, decimals, price).toString();
     }
     return feeItem.amountUSD;
@@ -21,7 +21,7 @@ export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, n
     }));
 
   return {
-    isSorted,
+    isUpdated: isUpdated,
     fee: {
       gasFee: updateFeeItems(fee.gasFee),
       providerFee: updateFeeItems(fee.providerFee),
@@ -103,9 +103,9 @@ export const updateBridgeQuotes = async (
         const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
-      const fee = updateFee(data.fee, tokensPrice);
-      isSorted = fee.isSorted;
-      data.fee = fee.fee;
+      const { isUpdated, fee } = updateFee(data.fee, tokensPrice);
+      isSorted = isUpdated;
+      data.fee = fee;
       data.path = updatePath(data, tokensPrice);
     }
     if (Object.keys(quote.tokensWithoutPrice).length !== 0 && isSorted === false) {
