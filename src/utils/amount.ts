@@ -9,11 +9,11 @@ export const calculateAmountUSD = (amountInWei: string, decimals: number, price:
 export const calculateNetGasFeeUsd = (item: SwapQuoteResponseData | BridgeQuoteRate): string => {
   const totalGas = item.fee.gasFee.reduce((acc, fee) => {
     if (!fee.included) {
-      const feeAmount = BigInt(fee.amountUSD || '0');
-      return acc + feeAmount;
+      const feeAmount = fee.amountUSD || '0';
+      return acc.plus(feeAmount);
     }
     return acc;
-  }, BigInt(0));
+  }, new Decimal(0));
   return totalGas.toString();
 };
 
