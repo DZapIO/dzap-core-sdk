@@ -1,6 +1,6 @@
 import { BridgeQuoteRequest, BridgeQuoteResponse, ChainData } from 'src/types';
 import Decimal from 'decimal.js';
-import { calculateAmountUSD, calculateNetAmountUsd, updateFee, updatePath } from './amount';
+import { calculateAmountUSD, calculateNetAmountUsd, compareAmount, updateFee, updatePath } from './amount';
 import { PriceService } from 'src/service/price';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 
@@ -49,19 +49,19 @@ export const updateBridgeQuotes = async (
       }
       const { srcDecimals, destDecimals, toChain } = tokensDetails;
 
-      if (!Number(data.srcAmountUSD)) {
+      if (!compareAmount(data.srcAmountUSD, '0')) {
         isSorted = false;
         const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || '0';
         data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit);
       }
 
-      if (!Number(data.destAmountUSD)) {
+      if (!compareAmount(data.destAmountUSD, '0')) {
         isSorted = false;
         const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || '0';
         data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit);
       }
 
-      if (Number(data.srcAmountUSD) && Number(data.destAmountUSD)) {
+      if (!compareAmount(data.srcAmountUSD, '0') && !compareAmount(data.destAmountUSD, '0')) {
         const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }

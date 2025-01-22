@@ -27,6 +27,10 @@ export const calculateNetAmountUsd = (item: BridgeQuoteRate | SwapQuoteResponseD
   return new Decimal(item.destAmountUSD || '0').minus(feeUSD).toFixed(5);
 };
 
+export const compareAmount = (sourceAmount: string | number, destAmount: string | number) => {
+  return new Decimal(sourceAmount).comparedTo(destAmount);
+};
+
 export const calculateNetGasFee = (item: SwapQuoteResponseData | BridgeQuoteRate): string => {
   const totalGas = item.fee.gasFee.reduce((acc, fee) => {
     if (!fee.included) {

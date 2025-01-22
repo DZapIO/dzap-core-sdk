@@ -3,7 +3,7 @@ import { formatUnits } from 'viem';
 import Decimal from 'decimal.js';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 import { PriceService } from 'src/service/price';
-import { calculateNetAmountUsd, calculateNetGasFee, updateFee } from './amount';
+import { calculateNetAmountUsd, calculateNetGasFee, compareAmount, updateFee } from './amount';
 
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
@@ -45,16 +45,16 @@ export const updateSwapQuotes = async (
         return +amountUSD ? amountUSD.toFixed() : null;
       };
 
-      if (!Number(data.srcAmountUSD)) {
+      if (data.srcAmountUSD && !compareAmount(data.srcAmountUSD, '0')) {
         isSorted = false;
         data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
       }
-      if (!Number(data.destAmountUSD)) {
+      if (data.destAmountUSD && !compareAmount(data.destAmountUSD, '0')) {
         isSorted = false;
         data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
       }
 
-      if (Number(data.srcAmountUSD) && Number(data.destAmountUSD)) {
+      if (data.srcAmountUSD && !compareAmount(data.srcAmountUSD, '0') && data.destAmountUSD && !compareAmount(data.destAmountUSD, '0')) {
         const priceImpact = new Decimal(data.destAmountUSD || 0)
           .minus(data.srcAmountUSD || 0)
           .div(data.srcAmountUSD || 0)
