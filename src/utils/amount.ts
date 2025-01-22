@@ -14,7 +14,7 @@ export const calculateNetGasFeeUsd = (item: SwapQuoteResponseData | BridgeQuoteR
     }
     return acc;
   }, new Decimal(0));
-  return totalGas.toString();
+  return totalGas.toFixed(5);
 };
 
 export const calculateNetAmount = (item: BridgeQuoteRate | SwapQuoteResponseData) => {

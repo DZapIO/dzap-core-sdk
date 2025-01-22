@@ -8,7 +8,7 @@ export const updateFee = (fee: Fee, tokensPrice: Record<number, Record<string, n
   const updateAmountUSD = (feeItem: FeeDetails, chainId: number, address: string, amount: string, decimals: number) => {
     const price = tokensPrice[chainId]?.[address] || 0;
     if (!feeItem.amountUSD || parseFloat(feeItem.amountUSD) === 0) {
-      isUpdated = !(feeItem.included === true);
+      isUpdated = feeItem.included;
       return calculateAmountUSD(amount, decimals, price).toString();
     }
     return feeItem.amountUSD;
