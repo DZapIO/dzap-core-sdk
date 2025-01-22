@@ -1,9 +1,10 @@
-import { ChainData, FeeDetails, SwapQuoteRequest, SwapQuoteResponse } from 'src/types';
+import { ChainData, SwapQuoteRequest, SwapQuoteResponse } from 'src/types';
 import { formatUnits } from 'viem';
 import Decimal from 'decimal.js';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 import { PriceService } from 'src/service/price';
-import { calculateNetAmount, calculateNetGasFee } from './amount';
+import { calculateNetAmountUsd, calculateNetGasFee, updateFee } from './amount';
+
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
   request: SwapQuoteRequest,
@@ -53,34 +54,23 @@ export const updateSwapQuotes = async (
         data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
       }
 
-      if (data.srcAmountUSD && Number(data.srcAmountUSD) && data.destAmountUSD && Number(data.destAmountUSD)) {
-        const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
+      if (Number(data.srcAmountUSD) && Number(data.destAmountUSD)) {
+        const priceImpact =
+          data.destAmountUSD && data.srcAmountUSD
+            ? new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100)
+            : new Decimal(0);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
-      const updateFeeAmountUSD = (fees: FeeDetails[], tokenPriceMap: Record<string, string | null>) => {
-        let localIsSorted = true;
-        for (const fee of fees) {
-          if (fee.amountUSD && fee.amountUSD !== '0') continue;
-          localIsSorted = false;
-          const pricePerUnit = tokenPriceMap[fee.address] || '0';
-          fee.amountUSD = new Decimal(formatUnits(BigInt(fee.amount), fee.decimals)).mul(pricePerUnit).toFixed();
-        }
-        return localIsSorted;
-      };
-
-      const { gasFee, protocolFee, providerFee } = data.fee;
-
-      isSorted = updateFeeAmountUSD(gasFee, tokensPrice);
-      isSorted = updateFeeAmountUSD(protocolFee, tokensPrice);
-
-      isSorted = updateFeeAmountUSD(providerFee, tokensPrice);
+      isSorted = !updateFee(data.fee, {
+        [request.chainId]: tokensPrice,
+      });
     }
     if (quote.tokensWithoutPrice.length !== 0 || isSorted == false) {
       quote.quoteRates = Object.fromEntries(
         Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
-          const aNetAmount = calculateNetAmount(a.data);
-          const bNetAmount = calculateNetAmount(b.data);
+          const aNetAmount = calculateNetAmountUsd(a.data);
+          const bNetAmount = calculateNetAmountUsd(b.data);
           return new Decimal(bNetAmount).comparedTo(aNetAmount);
         }),
       );
