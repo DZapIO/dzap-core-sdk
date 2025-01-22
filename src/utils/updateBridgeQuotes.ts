@@ -85,9 +85,12 @@ export const updateBridgeQuotes = async (
 
       const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || 0;
       const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || 0;
-
-      data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit.toString()).toString();
-      data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit.toString()).toString();
+      if (!data.srcAmountUSD) {
+        data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit.toString()).toString();
+      }
+      if (!data.destAmountUSD) {
+        data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit.toString()).toString();
+      }
 
       if (data.srcAmountUSD && data.destAmountUSD && data.srcAmountUSD !== '0' && data.destAmountUSD !== '0') {
         const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);

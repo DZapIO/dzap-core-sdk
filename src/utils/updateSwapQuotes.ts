@@ -42,8 +42,12 @@ export const updateSwapQuotes = async (
         return +amountUSD ? amountUSD.toFixed() : null;
       };
 
-      data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
-      data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
+      if (!data.srcAmountUSD) {
+        data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
+      }
+      if (!data.destAmountUSD) {
+        data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
+      }
 
       if (data.srcAmountUSD && data.destAmountUSD) {
         const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
