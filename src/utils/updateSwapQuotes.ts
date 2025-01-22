@@ -24,6 +24,7 @@ export const updateSwapQuotes = async (
   });
 
   for (const quote of Object.values(quotes)) {
+    let isSorted = true;
     for (const rate of Object.values(quote.quoteRates)) {
       const data = rate.data;
       const tokensDetails = request.data.find((d) => d.srcToken === data.srcToken && d.destToken === data.destToken);
@@ -44,9 +45,11 @@ export const updateSwapQuotes = async (
       };
 
       if (!Number(data.srcAmountUSD)) {
+        isSorted = false;
         data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
       }
       if (!Number(data.destAmountUSD)) {
+        isSorted = false;
         data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
       }
 
@@ -56,21 +59,24 @@ export const updateSwapQuotes = async (
       }
 
       const updateFeeAmountUSD = (fees: FeeDetails[], tokenPriceMap: Record<string, string | null>) => {
+        let localIsSorted = true;
         for (const fee of fees) {
           if (fee.amountUSD && fee.amountUSD !== '0') continue;
+          localIsSorted = false;
           const pricePerUnit = tokenPriceMap[fee.address] || '0';
           fee.amountUSD = new Decimal(formatUnits(BigInt(fee.amount), fee.decimals)).mul(pricePerUnit).toFixed();
         }
+        return localIsSorted;
       };
 
       const { gasFee, protocolFee, providerFee } = data.fee;
 
-      updateFeeAmountUSD(gasFee, tokensPrice);
-      updateFeeAmountUSD(protocolFee, tokensPrice);
+      isSorted = updateFeeAmountUSD(gasFee, tokensPrice);
+      isSorted = updateFeeAmountUSD(protocolFee, tokensPrice);
 
-      updateFeeAmountUSD(providerFee, tokensPrice);
+      isSorted = updateFeeAmountUSD(providerFee, tokensPrice);
     }
-    if (quote.tokensWithoutPrice.length !== 0) {
+    if (quote.tokensWithoutPrice.length !== 0 || isSorted == false) {
       quote.quoteRates = Object.fromEntries(
         Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
           const aNetAmount = calculateNetAmount(a.data);
