@@ -3,7 +3,7 @@ import { formatUnits } from 'viem';
 import Decimal from 'decimal.js';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 import { PriceService } from 'src/service/price';
-import { calculateNetAmountUsd, calculateNetGasFee, compareAmount, updateFee } from './amount';
+import { calculateNetAmountUsd, calculateNetGasFee, updateFee } from './amount';
 
 export const updateSwapQuotes = async (
   quotes: SwapQuoteResponse,
@@ -45,16 +45,16 @@ export const updateSwapQuotes = async (
         return +amountUSD ? amountUSD.toFixed() : null;
       };
 
-      if (data.srcAmountUSD && !compareAmount(data.srcAmountUSD, '0')) {
+      if (data.srcAmountUSD && !Number(data.srcAmountUSD)) {
         isSorted = false;
         data.srcAmountUSD = calculateAmountUSD(srcAmount, srcTokenPricePerUnit);
       }
-      if (data.destAmountUSD && !compareAmount(data.destAmountUSD, '0')) {
+      if (data.destAmountUSD && !Number(data.srcAmountUSD)) {
         isSorted = false;
         data.destAmountUSD = calculateAmountUSD(destAmount, destTokenPricePerUnit);
       }
 
-      if (data.srcAmountUSD && !compareAmount(data.srcAmountUSD, '0') && data.destAmountUSD && !compareAmount(data.destAmountUSD, '0')) {
+      if (data.srcAmountUSD && !Number(data.srcAmountUSD) && data.destAmountUSD && !Number(data.srcAmountUSD)) {
         const priceImpact = new Decimal(data.destAmountUSD || 0)
           .minus(data.srcAmountUSD || 0)
           .div(data.srcAmountUSD || 0)
@@ -73,11 +73,11 @@ export const updateSwapQuotes = async (
         Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
           const aNetAmount = calculateNetAmountUsd(a.data);
           const bNetAmount = calculateNetAmountUsd(b.data);
-          return new Decimal(bNetAmount).comparedTo(aNetAmount);
+          return Number(bNetAmount) - Number(aNetAmount);
         }),
       );
       const recommendedSourceByGas = Object.keys(quote.quoteRates).sort((a, b) =>
-        new Decimal(calculateNetGasFee(quote.quoteRates[b].data)).comparedTo(calculateNetGasFee(quote.quoteRates[a].data)),
+        Number(calculateNetGasFee(quote.quoteRates[b].data) - calculateNetGasFee(quote.quoteRates[a].data)),
       )[0];
       const recommendedSourceByAmount = Object.keys(quote.quoteRates).sort((a, b) =>
         new Decimal(quote.quoteRates[a].data.destAmount).comparedTo(quote.quoteRates[b].data.destAmount),

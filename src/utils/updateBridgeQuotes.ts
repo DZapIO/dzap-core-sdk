@@ -1,6 +1,6 @@
 import { BridgeQuoteRequest, BridgeQuoteResponse, ChainData } from 'src/types';
 import Decimal from 'decimal.js';
-import { calculateAmountUSD, calculateNetAmountUsd, compareAmount, updateFee, updatePath } from './amount';
+import { calculateAmountUSD, calculateNetAmountUsd, updateFee, updatePath } from './amount';
 import { PriceService } from 'src/service/price';
 import { priceProviders } from 'src/service/price/types/IPriceProvider';
 
@@ -49,19 +49,19 @@ export const updateBridgeQuotes = async (
       }
       const { srcDecimals, destDecimals, toChain } = tokensDetails;
 
-      if (!compareAmount(data.srcAmountUSD, '0')) {
+      if (!Number(data.srcAmountUSD)) {
         isSorted = false;
         const srcTokenPricePerUnit = tokensPrice[request.fromChain]?.[data.srcToken.address] || '0';
         data.srcAmountUSD = calculateAmountUSD(data.srcAmount, srcDecimals, srcTokenPricePerUnit);
       }
 
-      if (!compareAmount(data.destAmountUSD, '0')) {
+      if (!Number(data.destAmountUSD)) {
         isSorted = false;
         const destTokenPricePerUnit = tokensPrice[toChain]?.[data.destToken.address] || '0';
         data.destAmountUSD = calculateAmountUSD(data.destAmount, destDecimals, destTokenPricePerUnit);
       }
 
-      if (!compareAmount(data.srcAmountUSD, '0') && !compareAmount(data.destAmountUSD, '0')) {
+      if (!Number(data.srcAmountUSD) && !Number(data.destAmountUSD)) {
         const priceImpact = new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
@@ -75,7 +75,7 @@ export const updateBridgeQuotes = async (
         Object.entries(quote.quoteRates).sort(([, a], [, b]) => {
           const aNetAmount = calculateNetAmountUsd(a);
           const bNetAmount = calculateNetAmountUsd(b);
-          return new Decimal(bNetAmount).comparedTo(aNetAmount);
+          return Number(bNetAmount) - Number(aNetAmount);
         }),
       );
       quote.recommendedSource = Object.keys(quote.quoteRates)[0];
