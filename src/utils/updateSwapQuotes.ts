@@ -55,16 +55,18 @@ export const updateSwapQuotes = async (
       }
 
       if (Number(data.srcAmountUSD) && Number(data.destAmountUSD)) {
-        const priceImpact =
-          data.destAmountUSD && data.srcAmountUSD
-            ? new Decimal(data.destAmountUSD).minus(data.srcAmountUSD).div(data.srcAmountUSD).mul(100)
-            : new Decimal(0);
+        const priceImpact = new Decimal(data.destAmountUSD || 0)
+          .minus(data.srcAmountUSD || 0)
+          .div(data.srcAmountUSD || 0)
+          .mul(100);
         data.priceImpactPercent = priceImpact.toFixed(2);
       }
 
-      isSorted = !updateFee(data.fee, {
+      const { fee, isUpdated } = updateFee(data.fee, {
         [request.chainId]: tokensPrice,
       });
+      data.fee = fee;
+      isSorted = !isUpdated;
     }
     if (quote.tokensWithoutPrice.length !== 0 || isSorted == false) {
       quote.quoteRates = Object.fromEntries(
