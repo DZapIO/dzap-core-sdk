@@ -1,5 +1,9 @@
 import Axios, { CancelTokenSource } from 'axios';
+import { Signer } from 'ethers';
+import ContractHandler from 'src/contractHandler';
+import PermitHandler from 'src/contractHandler/permitHandler';
 import { StatusCodes, TxnStatus } from 'src/enums';
+import { PriceService } from 'src/service/price';
 import {
   AvailableDZapServices,
   BridgeParamsRequest,
@@ -19,6 +23,9 @@ import {
   SwapQuoteResponse,
 } from 'src/types';
 import { getDZapAbi, getOtherAbis, handleDecodeTrxData } from 'src/utils';
+import { updateTokenListPrices } from 'src/utils/tokens';
+import { updateBridgeQuotes } from 'src/utils/updateBridgeQuotes';
+import { updateSwapQuotes } from 'src/utils/updateSwapQuotes';
 import { TransactionReceipt, WalletClient } from 'viem';
 import {
   buildBridgeTransaction,
@@ -31,13 +38,6 @@ import {
   fetchTokenDetails,
   swapTokensApi,
 } from '../api';
-import ContractHandler from 'src/contractHandler';
-import PermitHandler from 'src/contractHandler/permitHandler';
-import { Signer } from 'ethers';
-import { updateSwapQuotes } from 'src/utils/updateSwapQuotes';
-import { updateBridgeQuotes } from 'src/utils/updateBridgeQuotes';
-import { PriceService } from 'src/service/price';
-import { updateTokenListPrices } from 'src/utils/tokens';
 
 class DzapClient {
   private static instance: DzapClient;
@@ -236,6 +236,34 @@ class DzapClient {
       rpcUrls,
       data,
       approvalTxnCallback,
+    });
+  }
+
+  public async validatePermit({
+    permitData,
+    srcToken,
+    amount,
+    account,
+    chainId,
+    rpcUrls,
+    walletClient,
+  }: {
+    permitData: HexString;
+    srcToken: string;
+    amount: bigint;
+    account: HexString;
+    chainId: number;
+    rpcUrls: string[];
+    walletClient: WalletClient;
+  }) {
+    return await this.permitHandler.validatePermit({
+      permitData,
+      srcToken,
+      amount,
+      account,
+      chainId,
+      rpcUrls,
+      walletClient,
     });
   }
 

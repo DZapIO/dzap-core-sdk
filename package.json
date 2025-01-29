@@ -1,6 +1,6 @@
 {
   "name": "@dzapio/dzap-sdk",
-  "version": "2.0.66",
+  "version": "2.0.67",
   "description": "This project is a thin React wrapper around DZap, to easily call functionalities/contract integration.",
   "main": "dist/index.js",
   "source": "src/index.ts",
@@ -28,7 +28,7 @@
     "fix-permissions": "node ./scripts/fixPermissions.js"
   },
   "husky": {
-    "hooks": {
+    "hooks": { 
       "pre-commit": "npx lint-staged",
       "pre-push": "yarn prepush"
     }

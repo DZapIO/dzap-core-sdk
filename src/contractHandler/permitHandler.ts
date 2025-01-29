@@ -1,8 +1,8 @@
-import { DEFAULT_PERMIT_DATA, PERMIT2_APPROVE_DATA } from 'src/constants';
+import { DEFAULT_PERMIT_DATA, PERMIT2_APPROVE_DATA, Services } from 'src/constants';
 import { Erc20Functions, StatusCodes, TxnStatus } from 'src/enums';
 import { AvailableDZapServices, BridgeParamsRequestData, HexString, SwapData } from 'src/types';
 import { calcTotalSrcTokenAmount, isDZapNativeToken, isOneToMany, writeContract } from 'src/utils';
-import { checkPermit2, getPermit2Address, getPermit2PermitDataForApprove } from 'src/utils/permit/permit2Methods';
+import { checkPermit2, getPermit2Address, getPermit2PermitDataForApprove, validatePermit2Data } from 'src/utils/permit/permit2Methods';
 import { Abi, WalletClient, maxUint256 } from 'viem';
 
 import { erc20Abi } from 'src/artifacts';
@@ -195,6 +195,88 @@ class PermitHandler {
     }
 
     return { status: TxnStatus.success, data, code: StatusCodes.Success };
+  }
+  public async validatePermit({
+    permitData,
+    srcToken,
+    amount,
+    account,
+    chainId,
+    rpcUrls,
+    walletClient,
+  }: {
+    permitData: HexString;
+    srcToken: string;
+    amount: bigint;
+    account: HexString;
+    chainId: number;
+    rpcUrls: string[];
+    walletClient: WalletClient;
+  }): Promise<{ status: TxnStatus; code: StatusCodes; permitData: HexString }> {
+    try {
+      // Validate permit data using utility function
+      const { status, code, isValid } = await validatePermit2Data({
+        permitData,
+        srcToken,
+        amount,
+        account,
+        chainId,
+        rpcUrls,
+      });
+
+      if (code !== StatusCodes.Success) {
+        return {
+          status,
+          code,
+          permitData: '0x',
+        };
+      }
+
+      if (isValid) {
+        return {
+          status: TxnStatus.success,
+          code: StatusCodes.Success,
+          permitData,
+        };
+      }
+
+      // If invalid, create new permit
+      const dzapContractAddress = this.contractHandler.getDZapContractAddress({
+        chainId,
+        service: Services.swap,
+      });
+
+      const res = await getPermit2PermitDataForApprove({
+        chainId,
+        account,
+        token: srcToken,
+        dzapContractAddress,
+        amount,
+        signer: walletClient,
+        rpcUrls,
+      });
+
+      if (res.status !== TxnStatus.success || !res.permitData) {
+        return {
+          status: res.status,
+          code: res.code,
+          permitData: '0x',
+        };
+      }
+
+      return {
+        status: TxnStatus.success,
+        code: StatusCodes.Success,
+        permitData: res.permitData,
+      };
+    } catch (error) {
+      console.error('Error validating permit:', error);
+      return {
+        status: TxnStatus.error,
+        code: StatusCodes.Error,
+        permitData: '0x',
+      };
+    }
   }
 }
 
